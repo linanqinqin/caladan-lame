@@ -36,7 +36,7 @@ struct thread {
 	bool	xsave_area_in_use:1;
 	atomic8_t	interrupt_state;
 	struct thread_tf	*entry_regs;
-	unsigned long	junction_tstate_buf[22];
+	unsigned long	junction_tstate_buf[8];
 	struct stack	*stack;
 	uint16_t	last_cpu;
 	uint16_t	cur_kthread;
@@ -47,6 +47,7 @@ struct thread {
 	struct list_node	interruptible_link;
 	uint64_t	tlsvar;
 	uint64_t	fsbase;
+	unsigned long	junction_cold_state_buf[32];
 };
 
 extern uint64_t thread_get_total_cycles(thread_t *th);
