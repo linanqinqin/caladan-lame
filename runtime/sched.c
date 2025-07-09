@@ -15,6 +15,7 @@
 #include <base/log.h>
 #include <runtime/sync.h>
 #include <runtime/thread.h>
+#include <runtime/interruptible_wait.h>
 
 #include "defs.h"
 
@@ -73,10 +74,10 @@ static inline bool cores_have_affinity(unsigned int cpua, unsigned int cpub)
  * This function restores the state of the thread and switches from the runtime
  * stack to the thread's stack. Runtime state is not saved.
  */
-static __noreturn void jmp_thread(thread_t *th)
+static void jmp_thread(thread_t *th)
 {
 	assert_preempt_disabled();
-	assert(th->thread_ready);
+	assert(th->thread_ready == true);
 
 	/* linanqinqin */
 	/* LAME: Log when uthread is started (scheduled on kthread) */
@@ -119,7 +120,7 @@ static __noreturn void jmp_thread(thread_t *th)
 static void jmp_thread_direct(thread_t *oldth, thread_t *newth)
 {
 	assert_preempt_disabled();
-	assert(newth->thread_ready);
+	assert(newth->thread_ready == true);
 
 	/* linanqinqin */
 	/* LAME: Log when uthread is switched directly (oldth descheduled, newth scheduled) */
@@ -337,7 +338,7 @@ static __noinline bool do_watchdog(struct kthread *l)
 }
 
 /* the main scheduler routine, decides what to run next */
-static __noreturn __noinline void schedule(void)
+static __noinline void schedule(void)
 {
 	struct kthread *r = NULL, *l = myk();
 	uint64_t start_tsc;
@@ -365,6 +366,7 @@ static __noreturn __noinline void schedule(void)
 		// lame_bundle_remove_uthread_by_index(l, 0);
 		/* end */
 		store_release(&th->thread_running, false);
+		store_release(&th->cur_kthread, NCPU);
 		perthread_store(__self, NULL);
 		th = NULL;
 	}
@@ -515,6 +517,9 @@ done:
 		drain_overflow(l);
 
 	update_oldest_tsc(l);
+
+	store_release(&th->cur_kthread, kthread_idx(l));
+
 	spin_unlock(&l->lock);
 
 	/* update exit stat counters */
@@ -526,7 +531,6 @@ done:
 		STAT(REMOTE_RUNS)++;
 
 	/* update exported thread run start time */
-	th->run_start_tsc = perthread_get_stable(last_tsc);
 	ACCESS_ONCE(l->q_ptrs->run_start_tsc) = perthread_get_stable(last_tsc);
 
 	/* linanqinqin*/
@@ -580,6 +584,8 @@ static __always_inline void enter_schedule(thread_t *curth)
 	spin_lock(&k->lock);
 	now_tsc = rdtsc();
 
+	th = k->rq[k->rq_tail % RUNTIME_RQ_SIZE];
+
 	/* slow path: switch from the uthread stack to the runtime stack */
 	if (k->rq_head == k->rq_tail ||
 	    preempt_cede_needed(k) ||
@@ -595,7 +601,7 @@ static __always_inline void enter_schedule(thread_t *curth)
 	perthread_get_stable(last_tsc) = now_tsc;
 
 	/* pop the next runnable thread from the queue */
-	th = k->rq[k->rq_tail++ % RUNTIME_RQ_SIZE];
+	k->rq_tail++;
 	ACCESS_ONCE(k->q_ptrs->rq_tail)++;
 
 	/* linanqinqin */
@@ -622,10 +628,11 @@ static __always_inline void enter_schedule(thread_t *curth)
 		drain_overflow(k);
 
 	update_oldest_tsc(k);
+	store_release(&curth->cur_kthread, NCPU);
+	th->cur_kthread = kthread_idx(k);
 	spin_unlock(&k->lock);
 
 	/* update exported thread run start time */
-	th->run_start_tsc = perthread_get_stable(last_tsc);
 	ACCESS_ONCE(k->q_ptrs->run_start_tsc) = perthread_get_stable(last_tsc);
 
 	/* increment the RCU generation number (odd is in thread) */
@@ -924,6 +931,8 @@ static __always_inline thread_t *__thread_create(void)
 	th->thread_ready = false;
 	th->thread_running = false;
 	th->tlsvar = 0;
+	th->cur_kthread = NCPU;
+	atomic8_write(&th->interrupt_state, 0);
 
 	return th;
 }
@@ -1058,7 +1067,7 @@ void thread_exit(void)
  * immediately park each kthread when it first starts up, only schedule it once
  * the iokernel has granted it a core
  */
-static __noreturn void schedule_start(void)
+static void schedule_start(void)
 {
 	struct kthread *k = myk();
 
