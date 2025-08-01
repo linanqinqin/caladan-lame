@@ -174,6 +174,12 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 		return ret;
 	}
 
+	/* linanqinqin */
+	/* Print the address of __jmp_thread function */
+	extern void __jmp_thread(void);
+	log_info("__jmp_thread function address: %p", (void *)__jmp_thread);
+	/* end */
+	
 	ret = cfg_load(cfgpath);
 	if (ret)
 		return ret;
