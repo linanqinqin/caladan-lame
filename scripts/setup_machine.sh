@@ -14,8 +14,16 @@ if grep -q none /sys/devices/system/cpu/cpuidle/current_driver; then
 fi
 
 # set up the ksched module
-rmmod ksched
-rm /dev/ksched
+# /* linanqinqin */
+# check if ksched module is loaded before removing it
+if lsmod | grep -q "^ksched "; then
+  rmmod ksched
+fi
+# check if /dev/ksched exists before removing it
+if [ -e /dev/ksched ]; then
+  rm /dev/ksched
+fi
+# /* end */
 
 if [[ "$1x" = "nouintrx" ]]; then
   insmod $(dirname $0)/../ksched/build/ksched.ko nouintr=1
