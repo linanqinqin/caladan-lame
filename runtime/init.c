@@ -175,8 +175,8 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	}
 
 	/* linanqinqin */
-	/* Print the address of __jmp_thread function */
-	log_info("__jmp_thread function address: %p", (void *)__jmp_thread);
+	/* Print the address of __lame_entry handler */
+	log_info("__lame_entry handler stub address: %p", (void *)__lame_entry);
 	/* end */
 	
 	ret = cfg_load(cfgpath);
