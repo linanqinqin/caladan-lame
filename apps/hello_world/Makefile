@@ -11,8 +11,11 @@ hello_threads_obj = $(hello_threads_src:.c=.o)
 hello_network_src = hello_network.c
 hello_network_obj = $(hello_network_src:.c=.o)
 
+int_src = int.c
+int_obj = $(int_src:.c=.o)
+
 # must be first
-all: hello_world hello_threads hello_network
+all: hello_world hello_threads hello_network int
 
 lib_shim = $(ROOT_PATH)/shim/libshim.a -ldl
 
@@ -28,8 +31,12 @@ hello_network: $(hello_network_obj) $(RUNTIME_DEPS)
 	$(LD) $(LDFLAGS) -o $@ $(hello_network_obj) \
 	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
 
+int: $(int_obj) $(RUNTIME_DEPS)
+	$(LD) $(LDFLAGS) -o $@ $(int_obj) \
+	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
+
 # general build rules for all targets
-src = $(hello_world_src) $(hello_threads_src) $(hello_network_src)
+src = $(hello_world_src) $(hello_threads_src) $(hello_network_src) $(int_src)
 obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 
@@ -46,4 +53,4 @@ endif
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(dep) hello_world hello_threads hello_network 
+	rm -f $(obj) $(dep) hello_world hello_threads hello_network int 
