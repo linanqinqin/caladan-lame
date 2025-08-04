@@ -1,6 +1,9 @@
 #!/bin/bash
 # run with sudo
 
+# exit immediately if any command fails
+set -e
+
 # needed for the iokernel's shared memory
 sysctl -w kernel.shm_rmid_forced=1
 sysctl -w kernel.shmmax=18446744073692774399
