@@ -60,6 +60,11 @@ extern void __jmp_runtime_nosave(runtime_fn_t fn, void *stack) __noreturn;
 /* uintr assembly routine */
 extern void uintr_asm_entry();
 
+/* linanqinqin */
+/* lame assembly routine */
+extern void __lame_entry();
+/* end */
+
 /*
  * Stack support
  */
