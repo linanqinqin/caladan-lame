@@ -11,6 +11,8 @@
 #include <runtime/thread.h>
 
 /* linanqinqin */
+#include <fcntl.h>
+#include <sys/ioctl.h>
 #include <linux/lame.h>
 /* end */
 
@@ -164,7 +166,7 @@ static int lame_init(void)
 		if (ret < 0) {
 			log_err("[errno %d] ioctl LAME_REGISTER failed", errno);
 		} else {
-			log_info("__lame_entry registered at %p", arg.handler_stub_addr);
+			log_info("__lame_entry registered at %llx", arg.handler_stub_addr);
 		}
 		close(lamedev);
 	}
