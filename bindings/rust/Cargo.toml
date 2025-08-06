@@ -1,0 +1,31 @@
+[package]
+name = "shenango"
+version = "0.1.1"
+authors = ["The Shenango Developers"]
+edition = "2021"
+
+[dependencies]
+libc = "0.2"
+byteorder = "1.5"
+
+[build-dependencies]
+bindgen = "0.69.1"
+build-deps = "0.1.4"
+proc-macro2 = "1.0.66"
+anyhow = "1.0.86"
+
+[[bin]]
+name = "runtime_threads"
+path = "src/test_runtime_threads.rs"
+
+[[bin]]
+name = "runtime_joinhandle"
+path = "src/test_runtime_joinhandle.rs"
+
+[[bin]]
+name = "hello"
+path = "src/test_hello.rs"
+
+[[bin]]
+name = "smalloc"
+path = "src/test_smalloc.rs"
