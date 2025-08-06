@@ -10,6 +10,10 @@
 #include <base/limits.h>
 #include <runtime/thread.h>
 
+/* linanqinqin */
+#include <linux/lame.h>
+/* end */
+
 #include "defs.h"
 
 static pthread_barrier_t init_barrier;
@@ -139,6 +143,37 @@ static void *pthread_entry(void *data)
 	return NULL;
 }
 
+/* linanqinqin */
+/* register lame handler via ioctl */
+static int lame_init(void)
+{
+	int lamedev;
+	struct lame_arg arg;
+	int ret;
+
+	lamedev = open("/dev/lame", O_RDWR);
+    if (lamedev < 0) {
+        log_err("[errno %d] Failed to open /dev/lame", errno);
+		return lamedev;
+    }
+    else {
+		arg.is_present = 1;
+		arg.handler_stub_addr = (__u64)__lame_entry;
+		
+		ret = ioctl(lamedev, LAME_REGISTER, &arg);
+		if (ret < 0) {
+			log_err("[errno %d] ioctl LAME_REGISTER failed", errno);
+		} else {
+			log_info("__lame_entry registered at %p", arg.handler_stub_addr);
+		}
+		close(lamedev);
+	}
+
+	return ret;
+}
+
+/* end */
+
 /**
  * runtime_set_initializers - allow runtime to specifcy a function to run in
  * each stage of intialization (called before runtime_init).
@@ -181,6 +216,12 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	/* linanqinqin */
 	/* Print the address of __lame_entry handler */
 	log_info("__lame_entry handler stub address: %p", (void *)__lame_entry);
+
+	/* register lame handler via ioctl */
+	ret = lame_init();
+	if (ret) {
+		log_info("WARNING: LAME capability not enabled");
+	}
 	/* end */
 	
 	ret = cfg_load(cfgpath);
