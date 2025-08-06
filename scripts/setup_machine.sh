@@ -4,6 +4,12 @@
 # exit immediately if any command fails
 set -e
 
+# check if script is run with sudo/root privileges
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root (use sudo)" >&2
+   exit 1
+fi
+
 # needed for the iokernel's shared memory
 sysctl -w kernel.shm_rmid_forced=1
 sysctl -w kernel.shmmax=18446744073692774399
