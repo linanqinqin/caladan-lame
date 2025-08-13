@@ -19,7 +19,7 @@ extern unsigned int cfg_lame_bundle_size;
  *
  * Returns 0 if successful, or -ENOMEM if out of memory.
  */
-int lame_bundle_init(struct kthread *k)
+void lame_bundle_init(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 
@@ -32,10 +32,6 @@ int lame_bundle_init(struct kthread *k)
 	bundle->total_lames = 0;
 	bundle->enabled = false; /* Start disabled */
 
-	log_info("initialized LAME bundle for kthread %d with size %d",
-		 kthread_idx(k), bundle->size);
-
-	return 0;
 }
 
 /**
