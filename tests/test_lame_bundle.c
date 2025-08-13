@@ -21,17 +21,10 @@ static int test_bundle_initialization(void)
 	printf("Testing bundle initialization...\n");
 
 	/* Test bundle initialization */
-	ret = lame_bundle_init(k);
-	if (ret) {
-		printf("FAILED: lame_bundle_init returned %d\n", ret);
-		return -1;
-	}
+	lame_bundle_init(k);
 
 	/* Verify bundle state */
-	if (!k->lame_bundle.uthreads) {
-		printf("FAILED: uthreads array not allocated\n");
-		return -1;
-	}
+	/* Note: uthreads is now a static array, so we just check if bundle is initialized */
 
 	if (k->lame_bundle.size != cfg_lame_bundle_size) {
 		printf("FAILED: bundle size mismatch, expected %d, got %d\n",
@@ -45,8 +38,8 @@ static int test_bundle_initialization(void)
 		return -1;
 	}
 
-	if (cfg_lame_bundle_size > 1 && !k->lame_bundle.enabled) {
-		printf("FAILED: bundle should be enabled for size > 1\n");
+	if (cfg_lame_bundle_size > 1 && k->lame_bundle.enabled) {
+		printf("FAILED: bundle should be disabled initially\n");
 		return -1;
 	}
 
@@ -159,11 +152,14 @@ static int test_bundle_round_robin(void)
 		}
 	}
 
+	/* Enable bundle scheduling for round-robin test */
+	lame_sched_enable(k);
+
 	/* Test round-robin selection */
 	for (i = 0; i < k->lame_bundle.size * 2; i++) {
-		selected = lame_bundle_get_next_uthread(k);
+		selected = lame_sched_get_next_uthread(k);
 		if (!selected) {
-			printf("FAILED: lame_bundle_get_next_uthread returned NULL\n");
+			printf("FAILED: lame_sched_get_next_uthread returned NULL\n");
 			return -1;
 		}
 
@@ -190,6 +186,41 @@ static int test_bundle_round_robin(void)
 	return 0;
 }
 
+static int test_bundle_scheduling_control(void)
+{
+	struct kthread *k = myk();
+
+	printf("Testing bundle scheduling control...\n");
+
+	if (k->lame_bundle.size <= 1) {
+		printf("SKIPPED: bundle size <= 1, cannot test scheduling control\n");
+		return 0;
+	}
+
+	/* Test initial state - should be disabled */
+	if (lame_sched_is_enabled(k)) {
+		printf("FAILED: bundle should be disabled initially\n");
+		return -1;
+	}
+
+	/* Test enabling */
+	lame_sched_enable(k);
+	if (!lame_sched_is_enabled(k)) {
+		printf("FAILED: bundle should be enabled after lame_sched_enable\n");
+		return -1;
+	}
+
+	/* Test disabling */
+	lame_sched_disable(k);
+	if (lame_sched_is_enabled(k)) {
+		printf("FAILED: bundle should be disabled after lame_sched_disable\n");
+		return -1;
+	}
+
+	printf("PASSED: bundle scheduling control\n");
+	return 0;
+}
+
 static int test_bundle_cleanup(void)
 {
 	struct kthread *k = myk();
@@ -199,10 +230,7 @@ static int test_bundle_cleanup(void)
 	lame_bundle_cleanup(k);
 
 	/* Verify cleanup */
-	if (k->lame_bundle.uthreads) {
-		printf("FAILED: uthreads array not freed\n");
-		return -1;
-	}
+	/* Note: uthreads is now a static array, so we just check if bundle is reset */
 
 	if (k->lame_bundle.size != 0) {
 		printf("FAILED: size should be 0, got %d\n", k->lame_bundle.size);
@@ -233,6 +261,7 @@ static void main_handler(void *arg)
 	ret |= test_bundle_initialization();
 	ret |= test_bundle_uthread_management();
 	ret |= test_bundle_round_robin();
+	ret |= test_bundle_scheduling_control();
 	ret |= test_bundle_cleanup();
 
 	if (ret == 0) {
