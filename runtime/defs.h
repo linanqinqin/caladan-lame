@@ -103,7 +103,7 @@ struct lame_uthread_wrapper {
 
 /* Bundle data structure for LAME scheduling */
 struct lame_bundle {
-	struct lame_uthread_wrapper	*uthreads;	/* array of uthread wrappers */
+	struct lame_uthread_wrapper	uthreads[LAME_BUNDLE_SIZE_MAX];	/* array of uthread wrappers */
 	unsigned int			size;		/* configured bundle size */
 	unsigned int			used;		/* number of occupied uthread slots */
 	unsigned int			active;		/* current running uthread index */
