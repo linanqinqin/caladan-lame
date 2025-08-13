@@ -11,6 +11,9 @@
 
 #include "defs.h"
 
+/* External configuration variable */
+extern unsigned int cfg_lame_bundle_size;
+
 /**
  * lame_bundle_init - initializes a LAME bundle for a kthread
  * @k: the kthread to initialize the bundle for
