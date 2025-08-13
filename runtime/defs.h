@@ -431,7 +431,7 @@ DECLARE_PERTHREAD(struct kthread *, mykthread);
 DECLARE_PERTHREAD(unsigned int, kthread_idx);
 
 /* LAME bundle management functions */
-extern int lame_bundle_init(struct kthread *k);
+extern void lame_bundle_init(struct kthread *k);
 extern void lame_bundle_cleanup(struct kthread *k);
 extern int lame_bundle_add_uthread(struct kthread *k, thread_t *th);
 extern int lame_bundle_remove_uthread(struct kthread *k, thread_t *th);
