@@ -86,12 +86,12 @@ struct lame_uthread_wrapper {
 /* Bundle data structure for LAME scheduling */
 struct lame_bundle {
 	struct lame_uthread_wrapper	uthreads[LAME_BUNDLE_SIZE_MAX];	/* array of uthread wrappers */
-	unsigned int			size;		/* configured bundle size */
+	unsigned int			size;		/* configured bundle size (static config) */
 	unsigned int			used;		/* number of occupied uthread slots */
 	unsigned int			active;		/* current running uthread index */
 	uint64_t			total_cycles;	/* total cycles across all uthreads */
 	uint64_t			total_lames;	/* total LAMEs handled */
-	bool				enabled;	/* whether bundle scheduling is enabled */
+	bool				enabled;	/* dynamic runtime enable/disable flag */
 };
 
 /*
@@ -432,10 +432,18 @@ extern int lame_bundle_init(struct kthread *k);
 extern void lame_bundle_cleanup(struct kthread *k);
 extern int lame_bundle_add_uthread(struct kthread *k, thread_t *th);
 extern int lame_bundle_remove_uthread(struct kthread *k, thread_t *th);
-extern thread_t *lame_bundle_get_next_uthread(struct kthread *k);
-extern thread_t *lame_bundle_get_current_uthread(struct kthread *k);
-extern bool lame_bundle_is_enabled(struct kthread *k);
 extern unsigned int lame_bundle_get_used_count(struct kthread *k);
+
+/* LAME scheduling functions */
+extern thread_t *lame_sched_get_next_uthread(struct kthread *k);
+extern thread_t *lame_sched_get_current_uthread(struct kthread *k);
+extern bool lame_sched_is_enabled(struct kthread *k);
+
+/* Dynamic bundle scheduling control functions */
+extern void lame_sched_enable(struct kthread *k);
+extern void lame_sched_disable(struct kthread *k);
+extern bool lame_sched_is_statically_enabled(struct kthread *k);
+extern bool lame_sched_is_dynamically_enabled(struct kthread *k);
 
 extern struct kthread ks[NCPU];
 
