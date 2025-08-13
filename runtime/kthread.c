@@ -91,6 +91,15 @@ int kthread_init_thread(void)
 
 	iok.threads[mykthread->kthread_idx].tid = ret;
 
+	/* linanqinqin */
+	/* Initialize LAME bundle for this kthread */
+	ret = lame_bundle_init(mykthread);
+	if (ret) {
+		log_err("failed to initialize LAME bundle for kthread %d", 
+			kthread_idx(mykthread));
+		return ret;
+	}
+	/* end */
 	return 0;
 }
 
