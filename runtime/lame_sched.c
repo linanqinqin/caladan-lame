@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include <base/log.h>
-#include <runtime/smalloc.h>
 
 #include "defs.h"
 
@@ -23,18 +22,9 @@ extern unsigned int cfg_lame_bundle_size;
 int lame_bundle_init(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
-	size_t array_size;
-
-	/* Allocate the uthread wrapper array */
-	array_size = cfg_lame_bundle_size * sizeof(struct lame_uthread_wrapper);
-	bundle->uthreads = smalloc(array_size);
-	if (!bundle->uthreads) {
-		log_err("failed to allocate uthread wrapper array for bundle");
-		return -ENOMEM;
-	}
 
 	/* Initialize the bundle structure */
-	memset(bundle->uthreads, 0, array_size);
+	memset(bundle->uthreads, 0, sizeof(bundle->uthreads));
 	bundle->size = cfg_lame_bundle_size;
 	bundle->active = 0;
 	bundle->used = 0;
@@ -56,11 +46,8 @@ void lame_bundle_cleanup(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 
-	if (bundle->uthreads) {
-		sfree(bundle->uthreads);
-		bundle->uthreads = NULL;
-	}
-
+	/* Reset the bundle structure */
+	memset(bundle->uthreads, 0, sizeof(bundle->uthreads));
 	bundle->size = 0;
 	bundle->active = 0;
 	bundle->used = 0;
@@ -81,7 +68,7 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
 
-	if (!bundle->enabled || !bundle->uthreads)
+	if (!bundle->enabled)
 		return -EINVAL;
 
 	/* Find an empty slot */
@@ -114,7 +101,7 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
 
-	if (!bundle->enabled || !bundle->uthreads)
+	if (!bundle->enabled)
 		return -EINVAL;
 
 	/* Find the uthread in the bundle */
@@ -144,7 +131,7 @@ thread_t *lame_bundle_get_next_uthread(struct kthread *k)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int start_idx, i;
 
-	if (!bundle->enabled || !bundle->uthreads || bundle->used == 0)
+	if (!bundle->enabled || bundle->used == 0)
 		return NULL;
 
 	start_idx = bundle->active;
@@ -177,7 +164,7 @@ thread_t *lame_bundle_get_current_uthread(struct kthread *k)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int prev_idx;
 
-	if (!bundle->enabled || !bundle->uthreads || bundle->used == 0)
+	if (!bundle->enabled || bundle->used == 0)
 		return NULL;
 
 	/* The current uthread is the one before the active */
