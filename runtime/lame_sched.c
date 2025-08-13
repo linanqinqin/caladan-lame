@@ -30,7 +30,7 @@ int lame_bundle_init(struct kthread *k)
 	bundle->used = 0;
 	bundle->total_cycles = 0;
 	bundle->total_lames = 0;
-	bundle->enabled = true; /* Start enabled, will be toggled dynamically */
+	bundle->enabled = false; /* Start disabled */
 
 	log_info("initialized LAME bundle for kthread %d with size %d",
 		 kthread_idx(k), bundle->size);
