@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include <base/log.h>
-#include <base/mem.h>
+#include <runtime/smalloc.h>
 
 #include "defs.h"
 
@@ -27,7 +27,7 @@ int lame_bundle_init(struct kthread *k)
 
 	/* Allocate the uthread wrapper array */
 	array_size = cfg_lame_bundle_size * sizeof(struct lame_uthread_wrapper);
-	bundle->uthreads = mem_alloc(array_size);
+	bundle->uthreads = smalloc(array_size);
 	if (!bundle->uthreads) {
 		log_err("failed to allocate uthread wrapper array for bundle");
 		return -ENOMEM;
@@ -57,7 +57,7 @@ void lame_bundle_cleanup(struct kthread *k)
 	struct lame_bundle *bundle = &k->lame_bundle;
 
 	if (bundle->uthreads) {
-		mem_free(bundle->uthreads);
+		sfree(bundle->uthreads);
 		bundle->uthreads = NULL;
 	}
 
