@@ -414,6 +414,9 @@ struct kthread {
 
 	/* 10th cache-line, statistics counters */
 	uint64_t		stats[STAT_NR];
+	/* linanqinqin */
+	uint64_t		pad3[7];	/* padding to align lame_bundle to cache line */
+	/* end */
 
 	/* linanqinqin */
 	/* 11th cache-line, LAME bundle scheduling */
