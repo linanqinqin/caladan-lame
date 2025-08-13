@@ -63,13 +63,9 @@ int kthread_init_thread(void)
 
 	/* linanqinqin */
 	/* Initialize LAME bundle for this kthread */
-	ret = lame_bundle_init(mykthread);
-	if (ret) {
-		log_err("failed to initialize LAME bundle for kthread %d", 
-			kthread_idx(mykthread));
-		return ret;
-	}
+	lame_bundle_init(mykthread);
 	/* end */
+	
 	return 0;
 }
 
