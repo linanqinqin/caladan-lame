@@ -65,6 +65,46 @@ extern void uintr_asm_entry();
 extern void __lame_entry();
 /* end */
 
+/* linanqinqin */
+/*
+ * LAME Bundle Scheduling Support
+ */
+
+/* Maximum bundle size for LAME scheduling */
+#define LAME_BUNDLE_SIZE_MAX		8
+/* Default bundle size if not configured */
+#define LAME_BUNDLE_SIZE_DEFAULT	1
+
+/* uthread wrapper for bundle scheduling */
+struct lame_uthread_wrapper {
+	thread_t		*uthread;	/* pointer to the actual uthread */
+	bool			present;	/* whether this slot is occupied */
+	uint64_t		cycles;		/* accounting: cycles executed */
+	uint64_t		lame_count;	/* accounting: number of LAMEs handled */
+};
+
+/* Bundle data structure for LAME scheduling */
+struct lame_bundle {
+	struct lame_uthread_wrapper	*uthreads;	/* array of uthread wrappers */
+	unsigned int			size;		/* configured bundle size */
+	unsigned int			used;		/* number of occupied uthread slots */
+	unsigned int			active;		/* current running uthread index */
+	uint64_t			total_cycles;	/* total cycles across all uthreads */
+	uint64_t			total_lames;	/* total LAMEs handled */
+	bool				enabled;	/* whether bundle scheduling is enabled */
+};
+
+/* LAME bundle management functions */
+extern int lame_bundle_init(struct kthread *k);
+extern void lame_bundle_cleanup(struct kthread *k);
+extern int lame_bundle_add_uthread(struct kthread *k, thread_t *th);
+extern int lame_bundle_remove_uthread(struct kthread *k, thread_t *th);
+extern thread_t *lame_bundle_get_next_uthread(struct kthread *k);
+extern thread_t *lame_bundle_get_current_uthread(struct kthread *k);
+extern bool lame_bundle_is_enabled(struct kthread *k);
+extern unsigned int lame_bundle_get_used_count(struct kthread *k);
+/* end */
+
 /*
  * Stack support
  */
@@ -374,6 +414,11 @@ struct kthread {
 
 	/* 10th cache-line, statistics counters */
 	uint64_t		stats[STAT_NR];
+
+	/* linanqinqin */
+	/* 11th cache-line, LAME bundle scheduling */
+	struct lame_bundle	lame_bundle;
+	/* end */
 } __aligned(CACHE_LINE_SIZE * 2);
 
 /* compile-time verification of cache-line alignment */
@@ -386,6 +431,9 @@ BUILD_ASSERT(offsetof(struct kthread, timer_lock) % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(struct kthread, storage_q) % CACHE_LINE_SIZE == 0);
 #endif
 BUILD_ASSERT(offsetof(struct kthread, stats) % CACHE_LINE_SIZE == 0);
+/* linanqinqin */
+BUILD_ASSERT(offsetof(struct kthread, lame_bundle) % CACHE_LINE_SIZE == 0);
+/* end */
 
 extern struct kthread ks[NCPU];
 
