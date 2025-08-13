@@ -536,7 +536,9 @@ int cfg_load(const char *path)
 #endif
 		 cfg_directpath_enabled() ? "enabled" : "disabled",
 		 cfg_transparent_hugepages_enabled ? "enabled" : "disabled");
-
+	/* linanqinqin */	
+	log_info("cfg: lame bundle size %d", cfg_lame_bundle_size);
+	/* end */
 out:
 	fclose(f);
 	return ret;
