@@ -15,6 +15,7 @@
 #define MAX_LINE_LEN 1024
 #define MAX_UTHREADS 100
 #define MAX_EVENTS_PER_UTHREAD 1000
+#define MAX_FILTERED_LINES 10000
 
 typedef struct {
     char *uthread_addr;
@@ -26,15 +27,21 @@ typedef struct {
 typedef struct {
     uthread_info_t uthreads[MAX_UTHREADS];
     int uthread_count;
+    char *filtered_lines[MAX_FILTERED_LINES];
+    int filtered_line_count;
 } parse_state_t;
 
 /* Initialize parse state */
 void init_parse_state(parse_state_t *state) {
     state->uthread_count = 0;
+    state->filtered_line_count = 0;
     for (int i = 0; i < MAX_UTHREADS; i++) {
         state->uthreads[i].uthread_addr = NULL;
         state->uthreads[i].event_count = 0;
         state->uthreads[i].active = false;
+    }
+    for (int i = 0; i < MAX_FILTERED_LINES; i++) {
+        state->filtered_lines[i] = NULL;
     }
 }
 
@@ -59,6 +66,55 @@ uthread_info_t *get_uthread_info(parse_state_t *state, const char *uthread_addr)
     }
     
     return NULL;
+}
+
+/* Check if a line is a Caladan log line (has timestamp and CPU) */
+bool is_caladan_log_line(const char *line) {
+    // Look for timestamp pattern [  x.xxxxxx]
+    const char *timestamp_start = strchr(line, '[');
+    if (!timestamp_start) {
+        return false;
+    }
+    
+    // Look for "CPU" after timestamp
+    const char *cpu_pattern = strstr(line, "CPU");
+    if (!cpu_pattern) {
+        return false;
+    }
+    
+    // Make sure CPU comes after timestamp
+    return cpu_pattern > timestamp_start;
+}
+
+/* Add filtered line to state */
+void add_filtered_line(parse_state_t *state, const char *line) {
+    if (state->filtered_line_count >= MAX_FILTERED_LINES) {
+        return; // Too many lines
+    }
+    
+    // Remove newline if present
+    size_t len = strlen(line);
+    if (len > 0 && line[len-1] == '\n') {
+        len--;
+    }
+    
+    char *filtered_line = malloc(len + 1);
+    if (!filtered_line) return;
+    
+    strncpy(filtered_line, line, len);
+    filtered_line[len] = '\0';
+    
+    state->filtered_lines[state->filtered_line_count] = filtered_line;
+    state->filtered_line_count++;
+}
+
+/* Print filtered program output */
+void print_filtered_output(const parse_state_t *state) {
+    printf("=== FILTERED PROGRAM OUTPUT ===\n");
+    for (int i = 0; i < state->filtered_line_count; i++) {
+        printf("%s\n", state->filtered_lines[i]);
+    }
+    printf("==============================\n\n");
 }
 
 /* Parse a line and extract LAME scheduling information */
@@ -238,6 +294,12 @@ void cleanup_parse_state(parse_state_t *state) {
             }
         }
     }
+    
+    for (int i = 0; i < state->filtered_line_count; i++) {
+        if (state->filtered_lines[i]) {
+            free(state->filtered_lines[i]);
+        }
+    }
 }
 
 int main() {
@@ -254,14 +316,24 @@ int main() {
     
     // Read lines from stdin
     while (fgets(line, sizeof(line), stdin)) {
-        if (parse_lame_line(line, uthread_addr, event_type, details)) {
-            uthread_info_t *uthread = get_uthread_info(&state, uthread_addr);
-            if (uthread) {
-                add_event(uthread, event_type, details);
-                printf("Parsed: %s -> %s (%s)\n", uthread_addr, event_type, details);
+        // Filter Caladan log lines
+        if (is_caladan_log_line(line)) {
+            // Parse LAME scheduling events
+            if (parse_lame_line(line, uthread_addr, event_type, details)) {
+                uthread_info_t *uthread = get_uthread_info(&state, uthread_addr);
+                if (uthread) {
+                    add_event(uthread, event_type, details);
+                    printf("Parsed: %s -> %s (%s)\n", uthread_addr, event_type, details);
+                }
             }
+        } else {
+            // Regular program output
+            add_filtered_line(&state, line);
         }
     }
+    
+    // Print filtered program output first
+    print_filtered_output(&state);
     
     // Print summary
     print_summary(&state);
