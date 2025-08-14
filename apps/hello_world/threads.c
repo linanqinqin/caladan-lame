@@ -1,5 +1,5 @@
 /*
- * hello_threads.c - A hello world application demonstrating POSIX threading on Caladan
+ * threads.c - A hello world application demonstrating POSIX threading on Caladan
  * 
  * This example shows how to write a standard POSIX multi-threaded application
  * that runs transparently on Caladan using pthreads.

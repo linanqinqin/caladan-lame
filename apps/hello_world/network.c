@@ -1,5 +1,5 @@
 /*
- * hello_network.c - A simple network example demonstrating POSIX socket APIs on Caladan
+ * network.c - A simple network example demonstrating POSIX socket APIs on Caladan
  * 
  * This example shows how to write a standard POSIX network application
  * that runs transparently on Caladan using standard socket APIs.

@@ -5,11 +5,11 @@ include $(ROOT_PATH)/build/shared.mk
 hello_world_src = hello_world.c
 hello_world_obj = $(hello_world_src:.c=.o)
 
-hello_threads_src = hello_threads.c
-hello_threads_obj = $(hello_threads_src:.c=.o)
+threads_src = threads.c
+threads_obj = $(threads_src:.c=.o)
 
-hello_network_src = hello_network.c
-hello_network_obj = $(hello_network_src:.c=.o)
+network_src = network.c
+network_obj = $(network_src:.c=.o)
 
 int_src = int.c
 int_obj = $(int_src:.c=.o)
@@ -18,7 +18,7 @@ parse_lame_src = parse_lame.c
 parse_lame_obj = $(parse_lame_src:.c=.o)
 
 # must be first
-all: hello_world hello_threads hello_network int parse_lame
+all: hello_world threads network int parse_lame
 
 lib_shim = $(ROOT_PATH)/shim/libshim.a -ldl
 
@@ -26,12 +26,12 @@ hello_world: $(hello_world_obj) $(RUNTIME_DEPS)
 	$(LD) $(LDFLAGS) -o $@ $(hello_world_obj) \
 	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
 
-hello_threads: $(hello_threads_obj) $(RUNTIME_DEPS)
-	$(LD) $(LDFLAGS) -o $@ $(hello_threads_obj) \
+threads: $(threads_obj) $(RUNTIME_DEPS)
+	$(LD) $(LDFLAGS) -o $@ $(threads_obj) \
 	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
 
-hello_network: $(hello_network_obj) $(RUNTIME_DEPS)
-	$(LD) $(LDFLAGS) -o $@ $(hello_network_obj) \
+network: $(network_obj) $(RUNTIME_DEPS)
+	$(LD) $(LDFLAGS) -o $@ $(network_obj) \
 	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
 
 int: $(int_obj) $(RUNTIME_DEPS)
@@ -42,7 +42,7 @@ parse_lame: $(parse_lame_obj)
 	$(CC) $(CFLAGS) -o $@ $(parse_lame_obj)
 
 # general build rules for all targets
-src = $(hello_world_src) $(hello_threads_src) $(hello_network_src) $(int_src) $(parse_lame_src)
+src = $(hello_world_src) $(threads_src) $(network_src) $(int_src) $(parse_lame_src)
 obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 
@@ -59,4 +59,4 @@ endif
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(dep) hello_world hello_threads hello_network int parse_lame 
+	rm -f $(obj) $(dep) hello_world threads network int parse_lame 
