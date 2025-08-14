@@ -14,7 +14,7 @@
 #include <time.h>
 
 #define NUM_THREADS 4
-#define MATRIX_SIZE 512  // Size of matrices for multiplication
+#define MATRIX_SIZE 128  // Reduced from 512 to 128 to avoid memory pressure
 
 // Thread arguments structure
 typedef struct {
@@ -27,7 +27,7 @@ typedef struct {
 // Function to generate a random matrix
 void generate_random_matrix(int *matrix, int size) {
     for (int i = 0; i < size * size; i++) {
-        matrix[i] = rand() ; // Random values between 0 and 99
+        matrix[i] = rand() % 100; // Random values between 0 and 99
     }
 }
 
@@ -37,7 +37,9 @@ void matrix_multiply(int *A, int *B, int *C, int size) {
         for (int j = 0; j < size; j++) {
             C[i * size + j] = 0;
             for (int k = 0; k < size; k++) {
-                C[i * size + j] += A[i * size + k] * B[k * size + j];
+                // Use long long to prevent integer overflow
+                long long temp = (long long)A[i * size + k] * B[k * size + j];
+                C[i * size + j] += (int)(temp % 1000000); // Keep result manageable
             }
         }
     }
