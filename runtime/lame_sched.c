@@ -57,37 +57,52 @@ void lame_bundle_cleanup(struct kthread *k)
  * @k: the kthread
  * @th: the uthread to add
  *
- * Returns 0 if successful, or -ENOSPC if bundle is full.
+ * Returns 0 if successful, or -ENOSPC if bundle is full, or -EINVAL if invalid.
  */
 int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
+	int first_empty_slot = -1;
 
 	/* Check if bundle scheduling is statically enabled (size > 1) */
 	if (bundle->size <= 1)
 		return -EINVAL;
 
-	/* Check if bundle scheduling is dynamically enabled */
-	if (!bundle->enabled)
-		return -EINVAL;
-
-	/* Find an empty slot */
+	/* Iterate through the bundle to check for duplicates and find first empty slot */
 	for (i = 0; i < bundle->size; i++) {
-		if (!bundle->uthreads[i].present) {
-			bundle->uthreads[i].uthread = th;
-			bundle->uthreads[i].present = true;
-			bundle->uthreads[i].cycles = 0;
-			bundle->uthreads[i].lame_count = 0;
-			bundle->used++;
-			
-			log_debug("added uthread %p to bundle slot %d (kthread %d)",
-				 th, i, kthread_idx(k));
-			return 0;
+		if (bundle->uthreads[i].present) {
+			/* Check for duplicate */
+			if (bundle->uthreads[i].uthread == th) {
+				log_warn("[LAME]: attempted to add duplicate uthread %p to bundle (kthread %d)",
+					 th, kthread_idx(k));
+				return 0; /* Return gracefully, no error */
+			}
+		} else {
+			/* Record first empty slot */
+			if (first_empty_slot == -1) {
+				first_empty_slot = i;
+			}
 		}
 	}
 
-	return -ENOSPC;
+	/* Check if we found an empty slot */
+	if (first_empty_slot == -1) {
+		log_debug("[LAME]: bundle is full, cannot add uthread %p (kthread %d)",
+			 th, kthread_idx(k));
+		return -ENOSPC;
+	}
+
+	/* Add the uthread to the first empty slot */
+	bundle->uthreads[first_empty_slot].uthread = th;
+	bundle->uthreads[first_empty_slot].present = true;
+	bundle->uthreads[first_empty_slot].cycles = 0;
+	bundle->uthreads[first_empty_slot].lame_count = 0;
+	bundle->used++;
+	
+	log_debug("[LAME]: added uthread %p to bundle slot %d (kthread %d)",
+		 th, first_empty_slot, kthread_idx(k));
+	return 0;
 }
 
 /**
@@ -104,10 +119,6 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 
 	/* Check if bundle scheduling is statically enabled (size > 1) */
 	if (bundle->size <= 1)
-		return -EINVAL;
-
-	/* Check if bundle scheduling is dynamically enabled */
-	if (!bundle->enabled)
 		return -EINVAL;
 
 	/* Find the uthread in the bundle */
@@ -152,10 +163,6 @@ thread_t *lame_sched_get_next_uthread(struct kthread *k)
 	if (bundle->size <= 1)
 		return NULL;
 
-	/* Check if bundle scheduling is dynamically enabled */
-	if (!bundle->enabled || bundle->used == 0)
-		return NULL;
-
 	start_idx = bundle->active;
 	
 	/* Search for the next present uthread starting from current index */
@@ -188,10 +195,6 @@ thread_t *lame_sched_get_current_uthread(struct kthread *k)
 
 	/* Check if bundle scheduling is statically enabled (size > 1) */
 	if (bundle->size <= 1)
-		return NULL;
-
-	/* Check if bundle scheduling is dynamically enabled */
-	if (!bundle->enabled || bundle->used == 0)
 		return NULL;
 
 	/* The current uthread is the one before the active */
