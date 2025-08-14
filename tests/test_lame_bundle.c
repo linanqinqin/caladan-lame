@@ -2,6 +2,8 @@
  * test_lame_bundle.c - test program for LAME bundle scheduling data structures
  */
 
+#define LAME_TESTING
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,8 +12,7 @@
 #include <base/init.h>
 #include <runtime/runtime.h>
 #include <runtime/thread.h>
-
-#include "defs.h"
+#include <runtime/lame.h>
 
 static int test_bundle_initialization(void)
 {
