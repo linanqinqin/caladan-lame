@@ -14,8 +14,11 @@ hello_network_obj = $(hello_network_src:.c=.o)
 int_src = int.c
 int_obj = $(int_src:.c=.o)
 
+parse_lame_src = parse_lame.c
+parse_lame_obj = $(parse_lame_src:.c=.o)
+
 # must be first
-all: hello_world hello_threads hello_network int
+all: hello_world hello_threads hello_network int parse_lame
 
 lib_shim = $(ROOT_PATH)/shim/libshim.a -ldl
 
@@ -35,8 +38,11 @@ int: $(int_obj) $(RUNTIME_DEPS)
 	$(LD) $(LDFLAGS) -o $@ $(int_obj) \
 	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
 
+parse_lame: $(parse_lame_obj)
+	$(CC) $(CFLAGS) -o $@ $(parse_lame_obj)
+
 # general build rules for all targets
-src = $(hello_world_src) $(hello_threads_src) $(hello_network_src) $(int_src)
+src = $(hello_world_src) $(hello_threads_src) $(hello_network_src) $(int_src) $(parse_lame_src)
 obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 
@@ -53,4 +59,4 @@ endif
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(dep) hello_world hello_threads hello_network int 
+	rm -f $(obj) $(dep) hello_world hello_threads hello_network int parse_lame 
