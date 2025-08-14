@@ -63,6 +63,22 @@ uthread_info_t *get_uthread_info(parse_state_t *state, const char *uthread_addr)
 
 /* Parse a line and extract LAME scheduling information */
 bool parse_lame_line(const char *line, char *uthread_addr, char *event_type, char *details) {
+    // Extract timestamp from the beginning of the line
+    char timestamp[32] = "";
+    const char *timestamp_start = strchr(line, '[');
+    const char *timestamp_end = NULL;
+    
+    if (timestamp_start) {
+        timestamp_end = strchr(timestamp_start, ']');
+        if (timestamp_end) {
+            int timestamp_len = timestamp_end - timestamp_start + 1; // Include brackets
+            if (timestamp_len > 0 && timestamp_len < sizeof(timestamp)) {
+                strncpy(timestamp, timestamp_start, timestamp_len);
+                timestamp[timestamp_len] = '\0';
+            }
+        }
+    }
+    
     // Look for LAME scheduling pattern
     const char *lame_pattern = "[LAME][sched ";
     const char *lame_start = strstr(line, lame_pattern);
@@ -128,11 +144,14 @@ bool parse_lame_line(const char *line, char *uthread_addr, char *event_type, cha
         strcpy(details, details_start);
     }
     
-    // Prepend function name to details if found
+    // Prepend timestamp and function name to details
+    char temp_details[256];
+    strcpy(temp_details, details);
+    
     if (strlen(func_name) > 0) {
-        char temp_details[256];
-        strcpy(temp_details, details);
-        snprintf(details, 256, "[%s] %s", func_name, temp_details);
+        snprintf(details, 256, "%s [%s] %s", timestamp, func_name, temp_details);
+    } else {
+        snprintf(details, 256, "%s %s", timestamp, temp_details);
     }
     
     return true;
@@ -144,11 +163,28 @@ void add_event(uthread_info_t *uthread, const char *event_type, const char *deta
         return; // Too many events
     }
     
-    // Create event string
+    // Create event string with timestamp first
     char *event = malloc(256);
     if (!event) return;
     
-    snprintf(event, 256, "[%s] %s", event_type, details);
+    // Extract timestamp from details (it's the first field)
+    char timestamp[32] = "";
+    const char *timestamp_end = strchr(details, ']');
+    if (timestamp_end) {
+        int timestamp_len = timestamp_end - details + 1;
+        if (timestamp_len > 0 && timestamp_len < sizeof(timestamp)) {
+            strncpy(timestamp, details, timestamp_len);
+            timestamp[timestamp_len] = '\0';
+        }
+    }
+    
+    // Format: timestamp [event_type] [function_name] rest_of_details
+    const char *rest_of_details = details;
+    if (strlen(timestamp) > 0) {
+        rest_of_details = details + strlen(timestamp) + 1; // Skip timestamp and space
+    }
+    
+    snprintf(event, 256, "%s [%s] %s", timestamp, event_type, rest_of_details);
     uthread->events[uthread->event_count] = event;
     uthread->event_count++;
     
