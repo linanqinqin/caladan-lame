@@ -323,7 +323,7 @@ int main() {
                 uthread_info_t *uthread = get_uthread_info(&state, uthread_addr);
                 if (uthread) {
                     add_event(uthread, event_type, details);
-                    printf("Parsed: %s -> %s (%s)\n", uthread_addr, event_type, details);
+                    // printf("Parsed: %s -> %s (%s)\n", uthread_addr, event_type, details);
                 }
             }
         } else {
