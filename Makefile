@@ -1,6 +1,14 @@
 ROOT_PATH=.
 include $(ROOT_PATH)/build/shared.mk
 
+# Verbose mode - use V=1 to see full commands
+V ?= 0
+ifeq ($(V),1)
+    Q =
+else
+    Q = @
+endif
+
 DPDK_PATH = dpdk
 CHECKFLAGS = -D__CHECKER__ -Waddress-space
 CFLAGS += -MMD
@@ -42,7 +50,6 @@ PCM_LIBS = -lm -lstdc++
 # dpdk libs
 DPDK_LIBS=$(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --libs --static libdpdk)
 
-
 # must be first
 all: libbase.a libnet.a libruntime.a iokerneld $(test_targets) shim
 
@@ -52,23 +59,29 @@ $(iokernel_obj): INC += -I$(DPDK_PATH)/build/include
 $(iokernel_obj): INC += $(MLX5_INC)
 
 libbase.a: $(base_obj)
-	$(AR) rcs $@ $^
+	@echo "  AR      $@"
+	$(Q)$(AR) rcs $@ $^
 
 libnet.a: $(net_obj)
-	$(AR) rcs $@ $^
+	@echo "  AR      $@"
+	$(Q)$(AR) rcs $@ $^
 
 libruntime.a: $(runtime_obj)
-	$(AR) rcs $@ $^
+	@echo "  AR      $@"
+	$(Q)$(AR) rcs $@ $^
 
 iokerneld: $(iokernel_obj) libbase.a libnet.a base/base.ld $(PCM_DEPS)
-	$(LD) $(LDFLAGS) -o $@ $(iokernel_obj) libbase.a libnet.a $(DPDK_LIBS) \
+	@echo "  LD      $@"
+	$(Q)$(LD) $(LDFLAGS) -o $@ $(iokernel_obj) libbase.a libnet.a $(DPDK_LIBS) \
 	$(PCM_DEPS) $(PCM_LIBS) -lpthread -lnuma -ldl
 
 $(test_targets): $(test_obj) libbase.a libruntime.a libnet.a base/base.ld
-	$(LD) $(FLAGS) $(LDFLAGS) -o $@ $@.o $(RUNTIME_LIBS)
+	@echo "  LD      $@"
+	$(Q)$(LD) $(FLAGS) $(LDFLAGS) -o $@ $@.o $(RUNTIME_LIBS)
 
 shim:
-	$(MAKE) -C shim/
+	@echo "  MAKE    shim"
+	$(Q)$(MAKE) -C shim/
 
 .PHONY: shim
 
@@ -85,9 +98,12 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "  CC      $@"
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
+
 %.o: %.S
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "  CC      $@"
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
 # prints sparse checker tool output
 sparse: $(src)
@@ -103,6 +119,7 @@ submodules-clean:
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(dep) libbase.a libnet.a libruntime.a \
+	@echo "  CLEAN"
+	$(Q)rm -f $(obj) $(dep) libbase.a libnet.a libruntime.a \
 	iokerneld $(test_targets)
-	$(MAKE) -C shim/ clean
+	$(Q)$(MAKE) -C shim/ clean
