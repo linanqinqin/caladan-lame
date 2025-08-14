@@ -78,6 +78,12 @@ static __noreturn void jmp_thread(thread_t *th)
 	assert_preempt_disabled();
 	assert(th->thread_ready);
 
+	/* linanqinqin */
+	/* LAME: Log when uthread is started (scheduled on kthread) */
+	log_debug("[LAME][sched ON]: uthread %p started (scheduled on kthread %d)", 
+		  th, kthread_idx(myk()));
+	/* end */
+
 	perthread_store(__self, th);
 	th->thread_ready = false;
 	if (unlikely(load_acquire(&th->thread_running))) {
@@ -101,6 +107,12 @@ static void jmp_thread_direct(thread_t *oldth, thread_t *newth)
 {
 	assert_preempt_disabled();
 	assert(newth->thread_ready);
+
+	/* linanqinqin */
+	/* LAME: Log when uthread is switched directly (oldth descheduled, newth scheduled) */
+	log_debug("[LAME][sched ON]: direct switch: uthread %p scheduled on kthread %d", 
+		  newth, kthread_idx(myk()));
+	/* end */	
 
 	perthread_store(__self, newth);
 	newth->thread_ready = false;
@@ -331,6 +343,11 @@ static __noreturn __noinline void schedule(void)
 
 	/* unmark busy for the stack of the last uthread */
 	if (likely(perthread_get_stable(__self) != NULL)) {
+		/* linanqinqin */
+                /* LAME: Log when uthread is descheduled from kthread */
+                log_debug("[LAME][sched OFF]: uthread %p descheduled from kthread %d",
+                          perthread_get_stable(__self), kthread_idx(l));
+                /* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
 		perthread_get_stable(__self) = NULL;
 	}
@@ -477,6 +494,12 @@ static __always_inline void enter_schedule(thread_t *curth)
 	uint64_t now_tsc;
 
 	assert_preempt_disabled();
+
+	/* linanqinqin */
+	/* LAME: Log when uthread enters scheduler (descheduled from kthread) */
+	log_debug("[LAME][sched OFF]: uthread %p entering scheduler (descheduled from kthread %d)", 
+		  curth, kthread_idx(k));
+	/* end */	
 
 	/* prepare current thread for sleeping */
 	curth->last_cpu = k->curr_cpu;
@@ -710,11 +733,68 @@ void thread_ready_head(thread_t *th)
 	putk();
 }
 
+<<<<<<< HEAD
 static void thread_finish_cede(void)
+=======
+// Hacky way to calculate total cycle time.
+uint64_t thread_get_total_cycles(thread_t *th) {
+
+	unsigned int k = load_acquire(&th->cur_kthread);
+	uint64_t k_run_start, cycles = ACCESS_ONCE(th->total_cycles);
+	// th is not running on any kthread or we just missed it starting to run.
+	// Either way the last total_cycles should be accurate.
+	if (k == NCPU)
+		return cycles;
+
+	bool correct_k = false;
+	spin_lock_np(&ks[k].lock);
+	correct_k = th->cur_kthread == k;
+	cycles = ACCESS_ONCE(th->total_cycles);
+	k_run_start = ks[k].q_ptrs->run_start_tsc;
+	spin_unlock_np(&ks[k].lock);
+
+	if (correct_k)
+		return cycles + rdtsc() - k_run_start;
+	return cycles;
+}
+
+void thread_finish_yield(void)
+{
+	thread_t *curth = thread_self();
+	struct kthread *k = myk();
+
+	assert_preempt_disabled();
+
+	spin_lock(&k->lock);
+
+	/* check for softirqs */
+	softirq_run_locked(k);
+
+	/* linanqinqin */
+	/* LAME: Log when uthread cedes (descheduled from kthread) */
+	log_debug("[LAME][sched OFF]: uthread %p ceding (descheduled from kthread %d)", 
+		  curth, kthread_idx(k));
+	/* end */
+
+	curth->thread_ready = false;
+	curth->last_cpu = k->curr_cpu;
+	thread_ready_locked(curth);
+
+	schedule();
+}
+
+void thread_finish_cede(void)
+>>>>>>> 4bd9aab ([runtime/sched] add logging for lame-related scheduling events)
 {
 	struct kthread *k = myk();
 	thread_t *myth = thread_self();
 	uint64_t tsc = rdtsc();
+
+	/* linanqinqin */
+	/* LAME: Log when uthread cedes (descheduled from kthread) */
+	log_debug("[LAME][sched OFF]: uthread %p ceding (descheduled from kthread %d)", 
+		  myth, kthread_idx(k));
+	/* end */
 
 	/* update stats and scheduler state */
 	myth->thread_running = false;
