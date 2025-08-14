@@ -81,7 +81,7 @@ $(test_targets): $(test_obj) libbase.a libruntime.a libnet.a base/base.ld
 
 shim:
 	@echo "  MAKE    shim"
-	$(Q)$(MAKE) -C shim/
+	$(Q)$(MAKE) -C shim/ V=$(V) --no-print-directory
 
 .PHONY: shim
 
@@ -122,4 +122,4 @@ clean:
 	@echo "  CLEAN"
 	$(Q)rm -f $(obj) $(dep) libbase.a libnet.a libruntime.a \
 	iokerneld $(test_targets)
-	$(Q)$(MAKE) -C shim/ clean
+	$(Q)$(MAKE) -C shim/ clean V=$(V) --no-print-directory

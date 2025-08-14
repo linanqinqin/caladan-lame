@@ -1,6 +1,14 @@
 ROOT_PATH=../
 include $(ROOT_PATH)/build/shared.mk
 
+# Verbose mode - use V=1 to see full commands
+V ?= 0
+ifeq ($(V),1)
+    Q =
+else
+    Q = @
+endif
+
 # handy for debugging
 print-%  : ; @echo $* = $($*)
 
@@ -12,7 +20,8 @@ shim_obj = $(shim_src:.c=.o)
 all: libshim.a
 
 libshim.a: $(shim_obj)
-	$(AR) rcs $@ $^
+	@echo "  AR      $@"
+	$(Q)$(AR) rcs $@ $^
 
 # general build rules for all targets
 src = $(shim_src)
@@ -26,10 +35,13 @@ endif
 # rule to generate a dep file by using the C preprocessor
 # (see man cpp for details on the -MM and -MT options)
 %.d: %.c
-	@$(CC) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+	$(Q)$(CC) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "  CC      $@"
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(dep) libshim.a
+	@echo "  CLEAN   shim"
+	$(Q)rm -f $(obj) $(dep) libshim.a
