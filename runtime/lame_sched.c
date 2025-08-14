@@ -74,8 +74,8 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
 		if (bundle->uthreads[i].present) {
 			/* Check for duplicate */
 			if (bundle->uthreads[i].uthread == th) {
-				log_warn("[LAME]: attempted to add duplicate uthread %p to bundle (kthread %d)",
-					 th, kthread_idx(k));
+					log_warn("[LAME]: attempted to add duplicate uthread %p to bundle (kthread %d)",
+				 th, myk_index());
 				return 0; /* Return gracefully, no error */
 			}
 		} else {
@@ -89,7 +89,7 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
 	/* Check if we found an empty slot */
 	if (first_empty_slot == -1) {
 		log_debug("[LAME]: bundle is full, cannot add uthread %p (kthread %d)",
-			 th, kthread_idx(k));
+		 th, myk_index());
 		return -ENOSPC;
 	}
 
@@ -101,7 +101,7 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
 	bundle->used++;
 	
 	log_debug("[LAME]: added uthread %p to bundle slot %d (kthread %d)",
-		 th, first_empty_slot, kthread_idx(k));
+		 th, first_empty_slot, myk_index());
 	return 0;
 }
 
@@ -129,7 +129,7 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 			bundle->used--;
 			
 			log_debug("removed uthread %p from bundle slot %d (kthread %d)",
-				 th, i, kthread_idx(k));
+				 th, i, myk_index());
 			return 0;
 		}
 	}
@@ -174,7 +174,7 @@ thread_t *lame_sched_get_next_uthread(struct kthread *k)
 			bundle->uthreads[idx].lame_count++;
 			
 			log_debug("LAME switch: uthread %p selected from bundle slot %d (kthread %d)",
-				 bundle->uthreads[idx].uthread, idx, kthread_idx(k));
+				 bundle->uthreads[idx].uthread, idx, myk_index());
 			return bundle->uthreads[idx].uthread;
 		}
 	}
@@ -236,7 +236,7 @@ void lame_sched_enable(struct kthread *k)
 	if (bundle->size > 1) {
 		bundle->enabled = true;
 		log_debug("enabled LAME bundle scheduling for kthread %d",
-			 kthread_idx(k));
+			 myk_index());
 	}
 }
 
@@ -255,7 +255,7 @@ void lame_sched_disable(struct kthread *k)
 	if (bundle->size > 1) {
 		bundle->enabled = false;
 		log_debug("disabled LAME bundle scheduling for kthread %d",
-			 kthread_idx(k));
+			 myk_index());
 	}
 }
 

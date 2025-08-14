@@ -81,7 +81,7 @@ static __noreturn void jmp_thread(thread_t *th)
 	/* linanqinqin */
 	/* LAME: Log when uthread is started (scheduled on kthread) */
 	log_info("[LAME][sched ON][jmp_thread]: uthread %p started (scheduled on kthread %d)", 
-		  th, kthread_idx(myk()));
+		  th, myk_index());
 	/* end */
 
 	perthread_store(__self, th);
@@ -111,7 +111,7 @@ static void jmp_thread_direct(thread_t *oldth, thread_t *newth)
 	/* linanqinqin */
 	/* LAME: Log when uthread is switched directly (oldth descheduled, newth scheduled) */
 	log_info("[LAME][sched ON][jmp_thread_direct]: direct switch: uthread %p scheduled on kthread %d", 
-		  newth, kthread_idx(myk()));
+		  newth, myk_index());
 	/* end */	
 
 	perthread_store(__self, newth);
@@ -346,7 +346,7 @@ static __noreturn __noinline void schedule(void)
 		/* linanqinqin */
                 /* LAME: Log when uthread is descheduled from kthread */
                 log_debug("[LAME][sched OFF][schedule]: uthread %p descheduled from kthread %d",
-                          perthread_get_stable(__self), kthread_idx(l));
+                          perthread_get_stable(__self), myk_index());
                 /* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
 		perthread_get_stable(__self) = NULL;
@@ -498,7 +498,7 @@ static __always_inline void enter_schedule(thread_t *curth)
 	/* linanqinqin */
 	/* LAME: Log when uthread enters scheduler (descheduled from kthread) */
 	log_info("[LAME][sched OFF][enter_schedule]: uthread %p entering scheduler (descheduled from kthread %d)", 
-		  curth, kthread_idx(k));
+		  curth, myk_index());
 	/* end */	
 
 	/* prepare current thread for sleeping */
@@ -742,7 +742,7 @@ static void thread_finish_cede(void)
 	/* linanqinqin */
 	/* LAME: Log when uthread cedes (descheduled from kthread) */
 	log_info("[LAME][sched OFF][thread_finish_cede]: uthread %p ceding (descheduled from kthread %d)", 
-		  myth, kthread_idx(k));
+		  myth, myk_index());
 	/* end */
 
 	/* update stats and scheduler state */
