@@ -132,7 +132,7 @@ bool parse_lame_line(const char *line, char *uthread_addr, char *event_type, cha
     if (strlen(func_name) > 0) {
         char temp_details[256];
         strcpy(temp_details, details);
-        snprintf(details, sizeof(details), "[%s] %s", func_name, temp_details);
+        snprintf(details, 256, "[%s] %s", func_name, temp_details);
     }
     
     return true;
