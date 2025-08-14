@@ -82,6 +82,22 @@ bool parse_lame_line(const char *line, char *uthread_addr, char *event_type, cha
     strncpy(event_type, event_start, event_len);
     event_type[event_len] = '\0';
     
+    // Look for function name in square brackets
+    const char *func_start = strchr(event_end, '[');
+    const char *func_end = NULL;
+    char func_name[64] = "";
+    
+    if (func_start) {
+        func_end = strchr(func_start, ']');
+        if (func_end) {
+            int func_len = func_end - func_start - 1; // -1 to exclude the brackets
+            if (func_len > 0 && func_len < sizeof(func_name) - 1) {
+                strncpy(func_name, func_start + 1, func_len);
+                func_name[func_len] = '\0';
+            }
+        }
+    }
+    
     // Look for uthread address
     const char *uthread_pattern = "uthread ";
     const char *uthread_start = strstr(line, uthread_pattern);
@@ -110,6 +126,13 @@ bool parse_lame_line(const char *line, char *uthread_addr, char *event_type, cha
         details[details_len] = '\0';
     } else {
         strcpy(details, details_start);
+    }
+    
+    // Prepend function name to details if found
+    if (strlen(func_name) > 0) {
+        char temp_details[256];
+        strcpy(temp_details, details);
+        snprintf(details, sizeof(details), "[%s] %s", func_name, temp_details);
     }
     
     return true;
