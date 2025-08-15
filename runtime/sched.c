@@ -344,10 +344,10 @@ static __noreturn __noinline void schedule(void)
 	/* unmark busy for the stack of the last uthread */
 	if (likely(perthread_get_stable(__self) != NULL)) {
 		/* linanqinqin */
-                /* LAME: Log when uthread is descheduled from kthread */
-                log_debug("[LAME][sched OFF][schedule]: uthread %p descheduled from kthread %d",
-                          perthread_get_stable(__self), myk_index());
-                /* end */
+		/* LAME: Log when uthread is descheduled from kthread */
+		log_info("[LAME][sched OFF][schedule]: uthread %p descheduled from kthread %d",
+					perthread_get_stable(__self), myk_index());
+		/* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
 		perthread_get_stable(__self) = NULL;
 	}
