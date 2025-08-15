@@ -924,6 +924,11 @@ static void thread_finish_exit(void)
 {
 	struct thread *th = thread_self();
 
+	/* linanqinqin */
+	/* LAME: Log when uthread exits */
+	log_info("[LAME][sched OFF][thread_finish_exit]: uthread %p exiting", th);
+	/* end */
+
 	gc_remove_thread(th);
 	perthread_store(__self, NULL);
 
