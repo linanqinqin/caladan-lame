@@ -359,8 +359,8 @@ static __noreturn __noinline void schedule(void)
 	if (likely(perthread_get_stable(__self) != NULL)) {
 		/* linanqinqin */
 		/* LAME: Log when uthread is descheduled from kthread */
-		log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:schedule]",
-					perthread_get_stable(__self), myk_index());
+		// log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:schedule]",
+		// 			perthread_get_stable(__self), myk_index());
 		/* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
 		perthread_get_stable(__self) = NULL;
