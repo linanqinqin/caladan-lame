@@ -292,7 +292,7 @@ void lame_bundle_print(struct kthread *k)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
 
-	log_info("[LAME BUNDLE] kthread %d: size=%u, used=%u, active=%u, total_cycles=%lu, total_lames=%lu, enabled=%d",
+	log_info("[LAME][BUNDLE][kthread:%d] size=%u, used=%u, active=%u, total_cycles=%lu, total_lames=%lu, enabled=%d",
 		 myk_index(), bundle->size, bundle->used, bundle->active,
 		 bundle->total_cycles, bundle->total_lames, bundle->enabled);
 
@@ -300,8 +300,8 @@ void lame_bundle_print(struct kthread *k)
 	for (i = 0; i < bundle->size; i++) {
 		struct lame_uthread_wrapper *wrapper = &bundle->uthreads[i];
 		
-		log_info("[LAME BUNDLE] slot[%u]: uthread=%p, present=%d, cycles=%lu, lame_count=%lu",
-			 i, wrapper->uthread, wrapper->present, wrapper->cycles, wrapper->lame_count);
+		log_info("[LAME][BUNDLE][kthread:%d][uthread:%p]: slot=%u, present=%d, cycles=%lu, lame_count=%lu",
+			 myk_index(), wrapper->uthread, i, wrapper->present, wrapper->cycles, wrapper->lame_count);
 	}
 }
 /* end */
