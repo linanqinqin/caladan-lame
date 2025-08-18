@@ -278,4 +278,30 @@ bool lame_sched_is_dynamically_enabled(struct kthread *k)
 {
 	return k->lame_bundle.enabled;
 }
+
+/**
+ * lame_bundle_print - prints the bundle array in a neat format
+ * @k: the kthread whose bundle to print
+ *
+ * This function prints the bundle structure in a readable format:
+ * - First line shows the bundle metadata fields
+ * - Subsequent lines show each uthread wrapper entry
+ */
+void lame_bundle_print(struct kthread *k)
+{
+	struct lame_bundle *bundle = &k->lame_bundle;
+	unsigned int i;
+
+	log_info("[LAME BUNDLE] kthread %d: size=%u, used=%u, active=%u, total_cycles=%lu, total_lames=%lu, enabled=%d",
+		 myk_index(), bundle->size, bundle->used, bundle->active,
+		 bundle->total_cycles, bundle->total_lames, bundle->enabled);
+
+	/* Print each uthread wrapper entry */
+	for (i = 0; i < bundle->size; i++) {
+		struct lame_uthread_wrapper *wrapper = &bundle->uthreads[i];
+		
+		log_info("[LAME BUNDLE] slot[%u]: uthread=%p, present=%d, cycles=%lu, lame_count=%lu",
+			 i, wrapper->uthread, wrapper->present, wrapper->cycles, wrapper->lame_count);
+	}
+}
 /* end */

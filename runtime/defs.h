@@ -436,6 +436,7 @@ extern void lame_bundle_cleanup(struct kthread *k);
 extern int lame_bundle_add_uthread(struct kthread *k, thread_t *th);
 extern int lame_bundle_remove_uthread(struct kthread *k, thread_t *th);
 extern unsigned int lame_bundle_get_used_count(struct kthread *k);
+extern void lame_bundle_print(struct kthread *k);
 
 /* LAME scheduling functions */
 extern thread_t *lame_sched_get_next_uthread(struct kthread *k);
