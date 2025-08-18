@@ -949,10 +949,10 @@ static void thread_finish_exit(void)
 	struct thread *th = thread_self();
 
 	/* linanqinqin */
+	log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:thread_finish_exit]", th, myk_index()); // log when uthread exits
 	lame_sched_disable(myk()); 				// disable lame scheduling
 	lame_bundle_remove_uthread(myk(), th); 	// remove the uthread from the lame bundle
 	lame_bundle_print(myk()); // print the lame bundle
-	log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:thread_finish_exit]", th, myk_index()); // log when uthread exits
 	/* end */
 
 	gc_remove_thread(th);
