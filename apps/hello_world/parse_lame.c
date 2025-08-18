@@ -135,80 +135,94 @@ bool parse_lame_line(const char *line, char *uthread_addr, char *event_type, cha
         }
     }
     
-    // Look for LAME scheduling pattern
-    const char *lame_pattern = "[LAME][sched ";
+    // Look for LAME pattern
+    const char *lame_pattern = "[LAME]";
     const char *lame_start = strstr(line, lame_pattern);
     if (!lame_start) {
         return false;
     }
     
-    // Extract event type (ON/OFF)
-    const char *event_start = lame_start + strlen(lame_pattern);
-    const char *event_end = strchr(event_start, ']');
-    if (!event_end) {
-        return false;
-    }
+    // Initialize field values
+    char uthread_val[64] = "";
+    char kthread_val[32] = "";
+    char sched_val[16] = "";
+    char func_val[64] = "";
     
-    int event_len = event_end - event_start;
-    if (event_len >= 10) return false; // Sanity check
-    strncpy(event_type, event_start, event_len);
-    event_type[event_len] = '\0';
+    // Parse field-value pairs
+    const char *current_pos = lame_start + strlen(lame_pattern);
     
-    // Look for function name in square brackets
-    const char *func_start = strchr(event_end, '[');
-    const char *func_end = NULL;
-    char func_name[64] = "";
-    
-    if (func_start) {
-        func_end = strchr(func_start, ']');
-        if (func_end) {
-            int func_len = func_end - func_start - 1; // -1 to exclude the brackets
-            if (func_len > 0 && func_len < sizeof(func_name) - 1) {
-                strncpy(func_name, func_start + 1, func_len);
-                func_name[func_len] = '\0';
+    while (*current_pos) {
+        // Look for next field [field:value]
+        const char *field_start = strchr(current_pos, '[');
+        if (!field_start) break;
+        
+        const char *field_end = strchr(field_start, ']');
+        if (!field_end) break;
+        
+        // Extract field-value pair
+        int field_len = field_end - field_start - 1; // -1 to exclude brackets
+        if (field_len <= 0) {
+            current_pos = field_end + 1;
+            continue;
+        }
+        
+        char field_value[128];
+        if (field_len >= sizeof(field_value)) field_len = sizeof(field_value) - 1;
+        strncpy(field_value, field_start + 1, field_len);
+        field_value[field_len] = '\0';
+        
+        // Parse field:value
+        const char *colon = strchr(field_value, ':');
+        if (colon) {
+            char field_name[32];
+            char field_val[96];
+            
+            int field_name_len = colon - field_value;
+            int field_val_len = strlen(field_value) - field_name_len - 1;
+            
+            if (field_name_len > 0 && field_name_len < sizeof(field_name) && 
+                field_val_len > 0 && field_val_len < sizeof(field_val)) {
+                
+                strncpy(field_name, field_value, field_name_len);
+                field_name[field_name_len] = '\0';
+                strncpy(field_val, colon + 1, field_val_len);
+                field_val[field_val_len] = '\0';
+                
+                // Store values based on field name
+                if (strcmp(field_name, "uthread") == 0) {
+                    strncpy(uthread_val, field_val, sizeof(uthread_val) - 1);
+                    uthread_val[sizeof(uthread_val) - 1] = '\0';
+                } else if (strcmp(field_name, "kthread") == 0) {
+                    strncpy(kthread_val, field_val, sizeof(kthread_val) - 1);
+                    kthread_val[sizeof(kthread_val) - 1] = '\0';
+                } else if (strcmp(field_name, "sched") == 0) {
+                    strncpy(sched_val, field_val, sizeof(sched_val) - 1);
+                    sched_val[sizeof(sched_val) - 1] = '\0';
+                } else if (strcmp(field_name, "func") == 0) {
+                    strncpy(func_val, field_val, sizeof(func_val) - 1);
+                    func_val[sizeof(func_val) - 1] = '\0';
+                }
             }
         }
+        
+        current_pos = field_end + 1;
     }
     
-    // Look for uthread address
-    const char *uthread_pattern = "uthread ";
-    const char *uthread_start = strstr(line, uthread_pattern);
-    if (!uthread_start) {
+    // Check if we have required fields
+    if (strlen(uthread_val) == 0 || strlen(sched_val) == 0) {
         return false;
     }
     
-    uthread_start += strlen(uthread_pattern);
-    const char *uthread_end = strchr(uthread_start, ' ');
-    if (!uthread_end) {
-        return false;
-    }
+    // Copy values to output parameters
+    strncpy(uthread_addr, uthread_val, 31);
+    uthread_addr[31] = '\0';
     
-    int uthread_len = uthread_end - uthread_start;
-    if (uthread_len >= 20) return false; // Sanity check
-    strncpy(uthread_addr, uthread_start, uthread_len);
-    uthread_addr[uthread_len] = '\0';
+    strncpy(event_type, sched_val, 15);
+    event_type[15] = '\0';
     
-    // Extract details (everything after uthread address)
-    const char *details_start = uthread_end + 1;
-    const char *details_end = strchr(details_start, '\n');
-    if (details_end) {
-        int details_len = details_end - details_start;
-        if (details_len >= 200) details_len = 199; // Limit length
-        strncpy(details, details_start, details_len);
-        details[details_len] = '\0';
-    } else {
-        strcpy(details, details_start);
-    }
-    
-    // Prepend timestamp and function name to details
-    char temp_details[256];
-    strcpy(temp_details, details);
-    
-    if (strlen(func_name) > 0) {
-        snprintf(details, 256, "%s [%s] %s", timestamp, func_name, temp_details);
-    } else {
-        snprintf(details, 256, "%s %s", timestamp, temp_details);
-    }
+    // Build details string
+    snprintf(details, 256, "%s [%s] uthread %s kthread %s", 
+             timestamp, func_val, uthread_val, kthread_val);
     
     return true;
 }
