@@ -190,17 +190,13 @@ bool parse_lame_line(const char *line, char *uthread_addr, char *event_type, cha
                 
                 // Store values based on field name
                 if (strcmp(field_name, "uthread") == 0) {
-                    strncpy(uthread_val, field_val, sizeof(uthread_val) - 1);
-                    uthread_val[sizeof(uthread_val) - 1] = '\0';
+                    snprintf(uthread_val, sizeof(uthread_val), "%s", field_val);
                 } else if (strcmp(field_name, "kthread") == 0) {
-                    strncpy(kthread_val, field_val, sizeof(kthread_val) - 1);
-                    kthread_val[sizeof(kthread_val) - 1] = '\0';
+                    snprintf(kthread_val, sizeof(kthread_val), "%s", field_val);
                 } else if (strcmp(field_name, "sched") == 0) {
-                    strncpy(sched_val, field_val, sizeof(sched_val) - 1);
-                    sched_val[sizeof(sched_val) - 1] = '\0';
+                    snprintf(sched_val, sizeof(sched_val), "%s", field_val);
                 } else if (strcmp(field_name, "func") == 0) {
-                    strncpy(func_val, field_val, sizeof(func_val) - 1);
-                    func_val[sizeof(func_val) - 1] = '\0';
+                    snprintf(func_val, sizeof(func_val), "%s", field_val);
                 }
             }
         }
