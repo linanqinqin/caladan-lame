@@ -91,6 +91,12 @@ static __noreturn void jmp_thread(thread_t *th)
 		while (load_acquire(&th->thread_running))
 			cpu_relax();
 	}
+	
+	/* linanqinqin */
+	lame_bundle_add_uthread(myk(), th); // add the uthread to the lame bundle
+	lame_sched_enable(myk()); // enable lame scheduling
+	/* end */
+
 	th->thread_running = true;
 	__jmp_thread(&th->tf);
 }
@@ -121,6 +127,12 @@ static void jmp_thread_direct(thread_t *oldth, thread_t *newth)
 		while (load_acquire(&newth->thread_running))
 			cpu_relax();
 	}
+	
+	/* linanqinqin */
+	lame_bundle_add_uthread(myk(), newth); // add the uthread to the lame bundle
+	lame_sched_enable(myk()); // enable lame scheduling
+	/* end */
+
 	newth->thread_running = true;
 	__jmp_thread_direct(&oldth->tf, &newth->tf, &oldth->thread_running);
 }
@@ -493,6 +505,10 @@ static __always_inline void enter_schedule(thread_t *curth)
 	thread_t *th;
 	uint64_t now_tsc;
 
+	/* linanqinqin */
+	lame_sched_disable(k); // disable lame scheduling
+	/* end */
+
 	assert_preempt_disabled();
 
 	/* linanqinqin */
@@ -506,6 +522,11 @@ static __always_inline void enter_schedule(thread_t *curth)
 
 	spin_lock(&k->lock);
 	now_tsc = rdtsc();
+
+	/* linanqinqin */
+	// insert the logic for removing the uthread from the lame bundle
+	lame_bundle_remove_uthread(k, curth);
+	/* end */
 
 	/* slow path: switch from the uthread stack to the runtime stack */
 	if (k->rq_head == k->rq_tail ||
@@ -925,8 +946,9 @@ static void thread_finish_exit(void)
 	struct thread *th = thread_self();
 
 	/* linanqinqin */
-	/* LAME: Log when uthread exits */
-	log_info("[LAME][sched OFF][thread_finish_exit]: uthread %p exiting", th);
+	lame_sched_disable(myk()); 				// disable lame scheduling
+	lame_bundle_remove_uthread(myk(), th); 	// remove the uthread from the lame bundle
+	log_info("[LAME][sched OFF][thread_finish_exit]: uthread %p exiting", th); // log when uthread exits
 	/* end */
 
 	gc_remove_thread(th);

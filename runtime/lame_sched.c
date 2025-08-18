@@ -66,8 +66,8 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
 	int first_empty_slot = -1;
 
 	/* Check if bundle scheduling is statically enabled (size > 1) */
-	if (bundle->size <= 1)
-		return -EINVAL;
+	// if (bundle->size <= 1)
+	// 	return -EINVAL;
 
 	/* Iterate through the bundle to check for duplicates and find first empty slot */
 	for (i = 0; i < bundle->size; i++) {
@@ -118,8 +118,8 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 	unsigned int i;
 
 	/* Check if bundle scheduling is statically enabled (size > 1) */
-	if (bundle->size <= 1)
-		return -EINVAL;
+	// if (bundle->size <= 1)
+	// 	return -EINVAL;
 
 	/* Find the uthread in the bundle */
 	for (i = 0; i < bundle->size; i++) {
@@ -233,11 +233,9 @@ void lame_sched_enable(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	
-	if (bundle->size > 1) {
-		bundle->enabled = true;
-		log_debug("enabled LAME bundle scheduling for kthread %d",
-			 myk_index());
-	}
+	bundle->enabled = true;
+	log_debug("enabled LAME bundle scheduling for kthread %d",
+			myk_index());
 }
 
 /**
@@ -252,11 +250,9 @@ void lame_sched_disable(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	
-	if (bundle->size > 1) {
-		bundle->enabled = false;
-		log_debug("disabled LAME bundle scheduling for kthread %d",
-			 myk_index());
-	}
+	bundle->enabled = false;
+	log_debug("disabled LAME bundle scheduling for kthread %d",
+		myk_index());
 }
 
 /**
