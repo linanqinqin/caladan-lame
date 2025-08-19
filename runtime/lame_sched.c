@@ -130,15 +130,15 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 }
 
 /**
- * lame_bundle_get_used_count - gets the number of active uthreads in the bundle
+ * lame_bundle_get_used_count - gets the number of uthreads currently in the bundle
  * @k: the kthread
  *
  * Returns the number of active uthreads.
  */
- unsigned int __always_inline lame_bundle_get_used_count(struct kthread *k)
- {
+__always_inline unsigned int lame_bundle_get_used_count(struct kthread *k)
+{
 	 return k->lame_bundle.used;
- }
+}
  
 /**
  * lame_sched_get_next_uthread - gets the next uthread to run in round-robin fashion
@@ -147,7 +147,7 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
  * Returns the next uthread to run, or NULL if none available.
  * The active field in the bundle represents the currently running uthread.
  */
-thread_t*__always_inline lame_sched_get_next_uthread(struct kthread *k)
+__always_inline thread_t *lame_sched_get_next_uthread(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int start_idx, i;
@@ -178,7 +178,7 @@ thread_t*__always_inline lame_sched_get_next_uthread(struct kthread *k)
  * Returns the currently active uthread, or NULL if none.
  * The active field in the bundle represents the currently running uthread.
  */
-thread_t*__always_inline lame_sched_get_current_uthread(struct kthread *k)
+__always_inline thread_t *lame_sched_get_current_uthread(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 
@@ -196,7 +196,7 @@ thread_t*__always_inline lame_sched_get_current_uthread(struct kthread *k)
  * Returns true if bundle scheduling is dynamically enabled,
  * false otherwise.
  */
-bool __always_inline lame_sched_is_enabled(struct kthread *k)
+__always_inline bool lame_sched_is_enabled(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	return bundle->enabled;
@@ -211,7 +211,7 @@ bool __always_inline lame_sched_is_enabled(struct kthread *k)
  * Note: Bundle scheduling must be statically enabled (size > 1) for this
  * to have any effect.
  */
-void __always_inline lame_sched_enable(struct kthread *k)
+__always_inline void lame_sched_enable(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	
@@ -228,7 +228,7 @@ void __always_inline lame_sched_enable(struct kthread *k)
  * when entering critical sections where bundle scheduling should be avoided
  * (e.g., during yield operations, scheduler critical sections).
  */
-void __always_inline lame_sched_disable(struct kthread *k)
+__always_inline void lame_sched_disable(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	
@@ -244,7 +244,7 @@ void __always_inline lame_sched_disable(struct kthread *k)
  * Returns true if bundle scheduling is statically enabled (bundle size > 1),
  * false otherwise. This is a configuration check, not a runtime state.
  */
-bool __always_inline lame_sched_is_statically_enabled(struct kthread *k)
+__always_inline bool lame_sched_is_statically_enabled(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	return bundle->size > 1;
@@ -254,10 +254,11 @@ bool __always_inline lame_sched_is_statically_enabled(struct kthread *k)
  * lame_sched_is_dynamically_enabled - checks if bundle scheduling is dynamically enabled
  * @k: the kthread
  *
- * Returns true if the dynamic enabled flag is set. This should only be checked
- * after confirming static enablement with lame_sched_is_statically_enabled().
+ * Returns true if bundle scheduling is dynamically enabled (enabled flag is true),
+ * false otherwise. This should be checked after confirming static enablement
+ * with lame_sched_is_statically_enabled().
  */
-bool __always_inline lame_sched_is_dynamically_enabled(struct kthread *k)
+__always_inline bool lame_sched_is_dynamically_enabled(struct kthread *k)
 {
 	return k->lame_bundle.enabled;
 }
@@ -299,7 +300,7 @@ void lame_bundle_print(struct kthread *k)
  * 4. Get next uthread from bundle
  * 5. Call __jmp_thread_direct to perform context switch
  */
-void __always_inline lame_handle(void)
+__always_inline void lame_handle(void)
 {
 	struct kthread *k = myk();
 	thread_t *cur_th, *next_th;
