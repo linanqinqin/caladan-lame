@@ -307,21 +307,24 @@ __always_inline void lame_handle(void)
 
 	/* Check if LAME scheduling is enabled */
 	if (!lame_sched_is_dynamically_enabled(k)) {
-		log_debug("LAME: scheduling disabled for kthread %d", myk_index());
+		log_info("[LAME][kthread:%d][func:lame_handle] scheduling disabled",
+			myk_index());
 		return;
 	}
 
 	/* Get current uthread's trapframe */
 	cur_th = lame_sched_get_current_uthread(k);
 	if (!cur_th) {
-		log_debug("LAME: no current uthread for kthread %d", myk_index());
+		log_info("[LAME][kthread:%d][func:lame_handle] no current uthread",
+			myk_index());
 		return;
 	}
 
 	/* Get next uthread from bundle */
 	next_th = lame_sched_get_next_uthread(k);
 	if (!next_th) {
-		log_debug("LAME: no next uthread available for kthread %d", myk_index());
+		log_info("[LAME][kthread:%d][func:lame_handle] no next uthread available",
+			myk_index());
 		return;
 	}
 
