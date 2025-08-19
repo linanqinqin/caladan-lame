@@ -65,10 +65,6 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
 	unsigned int i;
 	int first_empty_slot = -1;
 
-	/* Check if bundle scheduling is statically enabled (size > 1) */
-	// if (bundle->size <= 1)
-	// 	return -EINVAL;
-
 	/* Iterate through the bundle to check for duplicates and find first empty slot */
 	for (i = 0; i < bundle->size; i++) {
 		if (bundle->uthreads[i].present) {
@@ -117,10 +113,6 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
 
-	/* Check if bundle scheduling is statically enabled (size > 1) */
-	// if (bundle->size <= 1)
-	// 	return -EINVAL;
-
 	/* Find the uthread in the bundle */
 	for (i = 0; i < bundle->size; i++) {
 		if (bundle->uthreads[i].present && bundle->uthreads[i].uthread == th) {
@@ -143,7 +135,7 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
  *
  * Returns the number of active uthreads.
  */
- unsigned int lame_bundle_get_used_count(struct kthread *k)
+ unsigned int __always_inline lame_bundle_get_used_count(struct kthread *k)
  {
 	 return k->lame_bundle.used;
  }
@@ -152,24 +144,21 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
  * lame_sched_get_next_uthread - gets the next uthread to run in round-robin fashion
  * @k: the kthread
  *
- * Returns the next uthread to run, or NULL if no uthreads are available.
+ * Returns the next uthread to run, or NULL if none available.
+ * The active field in the bundle represents the currently running uthread.
  */
-thread_t *lame_sched_get_next_uthread(struct kthread *k)
+thread_t*__always_inline lame_sched_get_next_uthread(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int start_idx, i;
 
-	/* Check if bundle scheduling is statically enabled (size > 1) */
-	if (bundle->size <= 1)
-		return NULL;
-
 	start_idx = bundle->active;
 	
 	/* Search for the next present uthread starting from current index */
-	for (i = 0; i < bundle->size; i++) {
+	for (i = 1; i <= bundle->size; i++) {
 		unsigned int idx = (start_idx + i) % bundle->size;
 		if (bundle->uthreads[idx].present) {
-			bundle->active = (idx + 1) % bundle->size;
+			bundle->active = idx;
 			bundle->total_lames++;
 			bundle->uthreads[idx].lame_count++;
 			
@@ -187,21 +176,15 @@ thread_t *lame_sched_get_next_uthread(struct kthread *k)
  * @k: the kthread
  *
  * Returns the currently active uthread, or NULL if none.
+ * The active field in the bundle represents the currently running uthread.
  */
-thread_t *lame_sched_get_current_uthread(struct kthread *k)
+thread_t*__always_inline lame_sched_get_current_uthread(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
-	unsigned int prev_idx;
 
-	/* Check if bundle scheduling is statically enabled (size > 1) */
-	if (bundle->size <= 1)
-		return NULL;
-
-	/* The current uthread is the one before the active */
-	prev_idx = (bundle->active + bundle->size - 1) % bundle->size;
-	
-	if (bundle->uthreads[prev_idx].present)
-		return bundle->uthreads[prev_idx].uthread;
+	/* The current uthread is at the active index */
+	if (bundle->uthreads[bundle->active].present)
+		return bundle->uthreads[bundle->active].uthread;
 
 	return NULL;
 }
@@ -210,14 +193,13 @@ thread_t *lame_sched_get_current_uthread(struct kthread *k)
  * lame_sched_is_enabled - checks if bundle scheduling is enabled
  * @k: the kthread
  *
- * Returns true if bundle scheduling is both statically and dynamically enabled,
- * false otherwise. Static enablement requires size > 1, dynamic enablement
- * requires the enabled flag to be true.
+ * Returns true if bundle scheduling is dynamically enabled,
+ * false otherwise.
  */
-bool lame_sched_is_enabled(struct kthread *k)
+bool __always_inline lame_sched_is_enabled(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
-	return (bundle->size > 1) && bundle->enabled;
+	return bundle->enabled;
 }
 
 /**
@@ -229,7 +211,7 @@ bool lame_sched_is_enabled(struct kthread *k)
  * Note: Bundle scheduling must be statically enabled (size > 1) for this
  * to have any effect.
  */
-void lame_sched_enable(struct kthread *k)
+void __always_inline lame_sched_enable(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	
@@ -246,7 +228,7 @@ void lame_sched_enable(struct kthread *k)
  * when entering critical sections where bundle scheduling should be avoided
  * (e.g., during yield operations, scheduler critical sections).
  */
-void lame_sched_disable(struct kthread *k)
+void __always_inline lame_sched_disable(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	
@@ -259,12 +241,13 @@ void lame_sched_disable(struct kthread *k)
  * lame_sched_is_statically_enabled - checks if bundle scheduling is statically enabled
  * @k: the kthread
  *
- * Returns true if bundle size > 1, indicating bundle scheduling is configured
- * and available for use.
+ * Returns true if bundle scheduling is statically enabled (bundle size > 1),
+ * false otherwise. This is a configuration check, not a runtime state.
  */
-bool lame_sched_is_statically_enabled(struct kthread *k)
+bool __always_inline lame_sched_is_statically_enabled(struct kthread *k)
 {
-	return k->lame_bundle.size > 1;
+	struct lame_bundle *bundle = &k->lame_bundle;
+	return bundle->size > 1;
 }
 
 /**
@@ -274,7 +257,7 @@ bool lame_sched_is_statically_enabled(struct kthread *k)
  * Returns true if the dynamic enabled flag is set. This should only be checked
  * after confirming static enablement with lame_sched_is_statically_enabled().
  */
-bool lame_sched_is_dynamically_enabled(struct kthread *k)
+bool __always_inline lame_sched_is_dynamically_enabled(struct kthread *k)
 {
 	return k->lame_bundle.enabled;
 }
@@ -303,5 +286,51 @@ void lame_bundle_print(struct kthread *k)
 		log_info("[LAME][BUNDLE][kthread:%d][uthread:%p]: slot=%u, present=%d, cycles=%lu, lame_count=%lu",
 			 myk_index(), wrapper->uthread, i, wrapper->present, wrapper->cycles, wrapper->lame_count);
 	}
+}
+
+/**
+ * lame_handle - handles LAME exception and performs context switch
+ * 
+ * This function is called from the assembly __lame_entry after volatile
+ * registers are saved. It performs all the LAME handling logic:
+ * 1. Get current kthread
+ * 2. Check if LAME scheduling is enabled
+ * 3. Get current uthread's trapframe
+ * 4. Get next uthread from bundle
+ * 5. Call __jmp_thread_direct to perform context switch
+ */
+void __always_inline lame_handle(void)
+{
+	struct kthread *k = myk();
+	thread_t *cur_th, *next_th;
+
+	/* Check if LAME scheduling is enabled */
+	if (!lame_sched_is_dynamically_enabled(k)) {
+		log_debug("LAME: scheduling disabled for kthread %d", myk_index());
+		return;
+	}
+
+	/* Get current uthread's trapframe */
+	cur_th = lame_sched_get_current_uthread(k);
+	if (!cur_th) {
+		log_debug("LAME: no current uthread for kthread %d", myk_index());
+		return;
+	}
+
+	/* Get next uthread from bundle */
+	next_th = lame_sched_get_next_uthread(k);
+	if (!next_th) {
+		log_debug("LAME: no next uthread available for kthread %d", myk_index());
+		return;
+	}
+
+	log_debug("LAME: switching from uthread %p to %p (kthread %d)",
+		  cur_th, next_th, myk_index());
+
+	/* Call __jmp_thread_direct to perform context switch */
+	__jmp_thread_direct(&cur_th->tf, &next_th->tf, &cur_th->thread_running);
+
+	/* This point is reached when switching back to this thread */
+	log_debug("LAME: resumed uthread %p (kthread %d)", cur_th, myk_index());
 }
 /* end */
