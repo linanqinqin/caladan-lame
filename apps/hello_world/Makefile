@@ -17,8 +17,11 @@ int_obj = $(int_src:.c=.o)
 parse_lame_src = parse_lame.c
 parse_lame_obj = $(parse_lame_src:.c=.o)
 
+matmul_src = matmul.c
+matmul_obj = $(matmul_src:.c=.o)
+
 # must be first
-all: hello_world threads network int parse_lame
+all: hello_world threads network int parse_lame matmul
 
 lib_shim = $(ROOT_PATH)/shim/libshim.a -ldl
 
@@ -41,8 +44,11 @@ int: $(int_obj) $(RUNTIME_DEPS)
 parse_lame: $(parse_lame_obj)
 	$(CC) $(CFLAGS) -o $@ $(parse_lame_obj)
 
+matmul: $(matmul_obj)
+	$(CC) $(CFLAGS) -o $@ $(matmul_obj)
+
 # general build rules for all targets
-src = $(hello_world_src) $(threads_src) $(network_src) $(int_src) $(parse_lame_src)
+src = $(hello_world_src) $(threads_src) $(network_src) $(int_src) $(parse_lame_src) $(matmul_src)
 obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 
@@ -59,4 +65,4 @@ endif
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(dep) hello_world threads network int parse_lame 
+	rm -f $(obj) $(dep) hello_world threads network int parse_lame matmul 

@@ -24,10 +24,21 @@ typedef struct {
 } thread_args_t;
 
 /* linanqinqin */
-// Function to generate a random matrix
-void generate_random_matrix(int *matrix, int size) {
-    for (int i = 0; i < size * size; i++) {
-        matrix[i] = rand() % 100; // Random values between 0 and 99
+// Function to generate a deterministic matrix A based on i,j indices
+void generate_matrix_A(int *matrix, int size) {
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            matrix[i * size + j] = (i + j) % 100; // A[i,j] = (i + j) % 100
+        }
+    }
+}
+
+// Function to generate a deterministic matrix B based on i,j indices
+void generate_matrix_B(int *matrix, int size) {
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            matrix[i * size + j] = (i * j + 1) % 100; // B[i,j] = (i * j + 1) % 100
+        }
     }
 }
 
@@ -79,8 +90,8 @@ void *worker_thread(void *arg)
     }
     
     // Generate random matrices
-    generate_random_matrix(A, MATRIX_SIZE);
-    generate_random_matrix(B, MATRIX_SIZE);
+    generate_matrix_A(A, MATRIX_SIZE);
+    generate_matrix_B(B, MATRIX_SIZE);
     
     printf("Thread %d: Starting %dx%d matrix multiplication...\n", thread_id, MATRIX_SIZE, MATRIX_SIZE);
     
@@ -115,11 +126,6 @@ int main(int argc, char *argv[])
     int shared_counter = 0;
     pthread_mutex_t counter_mutex;
     int i, ret;
-    
-    /* linanqinqin */
-    // Seed random number generator
-    srand(time(NULL));
-    /* end */
     
     printf("Hello, World from Caladan with POSIX threading!\n");
     printf("Spawning %d worker threads for %dx%d matrix multiplication...\n", NUM_THREADS, MATRIX_SIZE, MATRIX_SIZE);
