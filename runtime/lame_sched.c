@@ -331,8 +331,8 @@ __always_inline void lame_handle(void)
 	log_info("[LAME][kthread:%d][func:lame_handle] switching from uthread %p to %p",
 		  myk_index(), cur_th, next_th);
 
-	/* Call __jmp_thread_direct to perform context switch */
-	__jmp_thread_direct(&cur_th->tf, &next_th->tf, &cur_th->thread_running);
+	/* Call __lame_jmp_thread_direct to perform context switch */
+	__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
 
 	/* This point is reached when switching back to this thread */
 	log_info("[LAME][kthread:%d][func:lame_handle] resumed uthread %p",

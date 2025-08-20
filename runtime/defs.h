@@ -81,6 +81,8 @@ extern void uintr_asm_entry();
 /* linanqinqin */
 /* lame assembly routine */
 extern void __lame_entry();
+extern void __lame_jmp_thread_direct(struct thread_tf *oldtf,
+				    struct thread_tf *newtf);
 /* end */
 
 /* linanqinqin */
