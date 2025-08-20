@@ -42,6 +42,7 @@ void matrix_multiply(int *A, int *B, int *C, int size) {
                 C[i * size + j] += (int)(temp % 1000000); // Keep result manageable
             }
         }
+        __asm__ volatile("int $0x1f"); // trigger LAME interrupt
     }
 }
 
