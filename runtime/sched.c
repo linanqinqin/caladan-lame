@@ -365,6 +365,7 @@ static __noreturn __noinline void schedule(void)
 					perthread_get_stable(__self), myk_index());
 		/* this remove could be duplicate, but it catches the case where schedule is called directly */
 		lame_bundle_remove_uthread(l, perthread_get_stable(__self));
+		lame_bundle_print(l);
 		/* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
 		perthread_get_stable(__self) = NULL;
