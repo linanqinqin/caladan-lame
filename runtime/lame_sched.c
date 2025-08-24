@@ -292,7 +292,7 @@ void lame_bundle_print(struct kthread *k)
 				  "[%p]", wrapper->uthread);
 	}
 
-	log_info("%s", log_buf);
+	log_err("%s", log_buf); // log_err is used to ensure the log is flushed
 }
 
 /**
