@@ -290,7 +290,7 @@ void lame_bundle_print(struct kthread *k)
 		sprintf(log_buf, "%s[%p]", log_buf, wrapper->uthread);
 	}
 
-	log_info(log_buf);
+	log_info("%s", log_buf);
 }
 
 /**
