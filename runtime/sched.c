@@ -485,9 +485,9 @@ done:
 	BUG_ON(lame_bundle_add_uthread(l, th) != 0); // add the first uthread to the bundle
 	
 	/* Try to add additional uthreads from the runqueue */
-	thread_t *bundle_tmp[l->bundle.size]; // temp array to store additional uthreads for updating run_start_tsc later
+	thread_t *bundle_tmp[LAME_BUNDLE_SIZE_MAX]; // temp array to store additional uthreads for updating run_start_tsc later
 	unsigned int bundle_th_added = 0;
-	for (unsigned int i = 0; (i < l->bundle.size-l->bundle.used) && (l->rq_head != l->rq_tail); i++) {
+	for (unsigned int i = 0; (i < l->lame_bundle.size-l->lame_bundle.used) && (l->rq_head != l->rq_tail); i++) {
 		thread_t *bundle_th;
 		/* Pop the next uthread from the runqueue */
 		bundle_th = l->rq[l->rq_tail++ % RUNTIME_RQ_SIZE];
@@ -592,7 +592,7 @@ static __always_inline void enter_schedule(thread_t *curth)
 	BUG_ON(lame_bundle_add_uthread(k, th) != 0); // add the first uthread to the bundle
 	
 	/* Try to add additional uthreads from the runqueue */
-	for (unsigned int i = 0; (i < k->bundle.size-k->bundle.used) && (k->rq_head != k->rq_tail); i++) {
+	for (unsigned int i = 0; (i < k->lame_bundle.size-k->lame_bundle.used) && (k->rq_head != k->rq_tail); i++) {
 		thread_t *bundle_th;
 		/* Pop the next uthread from the runqueue */
 		bundle_th = k->rq[k->rq_tail++ % RUNTIME_RQ_SIZE];
