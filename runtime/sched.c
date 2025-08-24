@@ -363,6 +363,8 @@ static __noreturn __noinline void schedule(void)
 		/* LAME: Log when uthread is descheduled from kthread */
 		log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:schedule]",
 					perthread_get_stable(__self), myk_index());
+		/* this remove could be duplicate, but it catches the case where schedule is called directly */
+		lame_bundle_remove_uthread(l, perthread_get_stable(__self));
 		/* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
 		perthread_get_stable(__self) = NULL;
