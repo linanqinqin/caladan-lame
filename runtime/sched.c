@@ -80,25 +80,26 @@ static __noreturn void jmp_thread(thread_t *th)
 
 	/* linanqinqin */
 	/* LAME: Log when uthread is started (scheduled on kthread) */
-	log_info("[LAME][uthread:%p][kthread:%d][sched:ON][func:jmp_thread]", 
-		  th, myk_index());
+	// log_info("[LAME][uthread:%p][kthread:%d][sched:ON][func:jmp_thread]", 
+	// 	  th, myk_index());
 	/* end */
 
 	perthread_store(__self, th);
 	th->thread_ready = false;
+	/* linanqinqin */
+	lame_bundle_set_ready_false_all(myk()); // set all uthreads in bundle to ready = false
+	/* end */
 	if (unlikely(load_acquire(&th->thread_running))) {
 		/* wait until the scheduler finishes switching stacks */
 		while (load_acquire(&th->thread_running))
 			cpu_relax();
 	}
-	
-	/* linanqinqin */
-	lame_bundle_add_uthread(myk(), th); // add the uthread to the lame bundle
-	lame_sched_enable(myk()); // enable lame scheduling
-	lame_bundle_print(myk()); // print the lame bundle
-	/* end */
 
 	th->thread_running = true;
+	/* linanqinqin */
+	lame_bundle_set_running_true_all(myk()); // set all uthreads in bundle to running = true
+	lame_sched_enable(myk()); // enable lame scheduling
+	/* end */
 	__jmp_thread(&th->tf);
 }
 
@@ -117,25 +118,26 @@ static void jmp_thread_direct(thread_t *oldth, thread_t *newth)
 
 	/* linanqinqin */
 	/* LAME: Log when uthread is switched directly (oldth descheduled, newth scheduled) */
-	log_info("[LAME][uthread:%p][kthread:%d][sched:ON][func:jmp_thread_direct]", 
-		  newth, myk_index());
+	// log_info("[LAME][uthread:%p][kthread:%d][sched:ON][func:jmp_thread_direct]", 
+	// 	  newth, myk_index());
 	/* end */	
 
 	perthread_store(__self, newth);
 	newth->thread_ready = false;
+	/* linanqinqin */
+	lame_bundle_set_ready_false_all(myk()); // set all uthreads in bundle to ready = false
+	/* end */
 	if (unlikely(load_acquire(&newth->thread_running))) {
 		/* wait until the scheduler finishes switching stacks */
 		while (load_acquire(&newth->thread_running))
 			cpu_relax();
 	}
-	
-	/* linanqinqin */
-	lame_bundle_add_uthread(myk(), newth); // add the uthread to the lame bundle
-	lame_sched_enable(myk()); // enable lame scheduling
-	lame_bundle_print(myk()); // print the lame bundle
-	/* end */
 
 	newth->thread_running = true;
+	/* linanqinqin */
+	lame_bundle_set_running_true_all(myk()); // set all uthreads in bundle to running = true
+	lame_sched_enable(myk()); // enable lame scheduling
+	/* end */
 	__jmp_thread_direct(&oldth->tf, &newth->tf, &oldth->thread_running);
 }
 
@@ -359,12 +361,18 @@ static __noreturn __noinline void schedule(void)
 	if (likely(perthread_get_stable(__self) != NULL)) {
 		/* linanqinqin */
 		/* LAME: Log when uthread is descheduled from kthread */
-		// log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:schedule]",
-		// 			perthread_get_stable(__self), myk_index());
+		log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:schedule]",
+					perthread_get_stable(__self), myk_index());
 		/* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
 		perthread_get_stable(__self) = NULL;
 	}
+	/* linanqinqin */
+	else {
+		log_info("[LAME][kthread:%d][sched:OFF][func:schedule]",
+			myk_index());
+	}
+	/* end */
 
 	/* update entry stat counters */
 	STAT(RESCHEDULES)++;
@@ -473,6 +481,27 @@ done:
 	th = l->rq[l->rq_tail++ % RUNTIME_RQ_SIZE];
 	ACCESS_ONCE(l->q_ptrs->rq_tail)++;
 
+	/* linanqinqin */
+	BUG_ON(lame_bundle_add_uthread(l, th) != 0); // add the first uthread to the bundle
+	
+	/* Try to add additional uthreads from the runqueue */
+	thread_t *bundle_tmp[l->bundle.size]; // temp array to store additional uthreads for updating run_start_tsc later
+	unsigned int bundle_th_added = 0;
+	for (unsigned int i = 0; (i < l->bundle.size-l->bundle.used) && (l->rq_head != l->rq_tail); i++) {
+		thread_t *bundle_th;
+		/* Pop the next uthread from the runqueue */
+		bundle_th = l->rq[l->rq_tail++ % RUNTIME_RQ_SIZE];
+		ACCESS_ONCE(l->q_ptrs->rq_tail)++;
+		/* add the next uthread to the bundle */
+		BUG_ON(lame_bundle_add_uthread(l, bundle_th) != 0); 	
+		bundle_tmp[bundle_th_added++] = bundle_th;
+		/* log the addition of the uthread to the bundle */
+		// log_info("[LAME][kthread:%d][func:schedule] Added uthread %p to bundle",
+		// 		myk_index(), bundle_th);
+	}
+	lame_bundle_print(l); // print the lame bundle
+	/* end */
+
 	/* move overflow tasks into the runqueue */
 	if (unlikely(!list_empty(&l->rq_overflow)))
 		drain_overflow(l);
@@ -491,6 +520,13 @@ done:
 	/* update exported thread run start time */
 	th->run_start_tsc = perthread_get_stable(last_tsc);
 	ACCESS_ONCE(l->q_ptrs->run_start_tsc) = perthread_get_stable(last_tsc);
+
+	/* linanqinqin*/
+	/* update run_start_tsc for additional uthreads */
+	for (unsigned int i = 0; i < bundle_th_added; i++) {
+		bundle_tmp[i]->run_start_tsc = perthread_get_stable(last_tsc);
+	}
+	/* end */
 
 	/* increment the RCU generation number (odd is in thread) */
 	store_release(&l->rcu_gen, l->rcu_gen + 1);
@@ -551,6 +587,29 @@ static __always_inline void enter_schedule(thread_t *curth)
 	/* pop the next runnable thread from the queue */
 	th = k->rq[k->rq_tail++ % RUNTIME_RQ_SIZE];
 	ACCESS_ONCE(k->q_ptrs->rq_tail)++;
+
+	/* linanqinqin */
+	BUG_ON(lame_bundle_add_uthread(k, th) != 0); // add the first uthread to the bundle
+	
+	/* Try to add additional uthreads from the runqueue */
+	for (unsigned int i = 0; (i < k->bundle.size-k->bundle.used) && (k->rq_head != k->rq_tail); i++) {
+		thread_t *bundle_th;
+		/* Pop the next uthread from the runqueue */
+		bundle_th = k->rq[k->rq_tail++ % RUNTIME_RQ_SIZE];
+		ACCESS_ONCE(k->q_ptrs->rq_tail)++;
+
+		/* add the next uthread to the bundle */
+		BUG_ON(lame_bundle_add_uthread(k, bundle_th) != 0); 
+
+		/* update run_start_tsc here; this is not the cleanest way but should work */
+		bundle_th->run_start_tsc = perthread_get_stable(last_tsc);
+
+		/* log the addition of the uthread to the bundle */
+		// log_info("[LAME][kthread:%d][func:enter_schedule] Added uthread %p to bundle",
+		// 		myk_index(), bundle_th);
+	}
+	lame_bundle_print(k); // print the lame bundle
+	/* end */
 
 	/* move overflow tasks into the runqueue */
 	if (unlikely(!list_empty(&k->rq_overflow)))
@@ -765,8 +824,8 @@ static void thread_finish_cede(void)
 
 	/* linanqinqin */
 	/* LAME: Log when uthread cedes (descheduled from kthread) */
-	log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:thread_finish_cede]", 
-		  myth, myk_index());
+	// log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:thread_finish_cede]", 
+	// 	  myth, myk_index());
 	/* end */
 
 	/* update stats and scheduler state */
@@ -949,7 +1008,7 @@ static void thread_finish_exit(void)
 	struct thread *th = thread_self();
 
 	/* linanqinqin */
-	log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:thread_finish_exit]", th, myk_index()); // log when uthread exits
+	// log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:thread_finish_exit]", th, myk_index()); // log when uthread exits
 	lame_sched_disable(myk()); 				// disable lame scheduling
 	lame_bundle_remove_uthread(myk(), th); 	// remove the uthread from the lame bundle
 	lame_bundle_print(myk()); // print the lame bundle

@@ -65,6 +65,9 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
 	unsigned int i;
 	int first_empty_slot = -1;
 
+	log_info("[LAME][kthread:%d][func:lame_bundle_add_uthread] adding uthread %p",
+			myk_index(), th);
+
 	/* Iterate through the bundle to check for duplicates and find first empty slot */
 	for (i = 0; i < bundle->size; i++) {
 		if (bundle->uthreads[i].present) {
@@ -96,8 +99,6 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
 	bundle->uthreads[first_empty_slot].lame_count = 0;
 	bundle->used++;
 	
-	log_debug("[LAME]: added uthread %p to bundle slot %d (kthread %d)",
-		 th, first_empty_slot, myk_index());
 	return 0;
 }
 
@@ -113,6 +114,9 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
 
+	log_info("[LAME][kthread:%d][func:lame_bundle_remove_uthread] removing uthread %p",
+			myk_index(), th);
+
 	/* Find the uthread in the bundle */
 	for (i = 0; i < bundle->size; i++) {
 		if (bundle->uthreads[i].present && bundle->uthreads[i].uthread == th) {
@@ -120,8 +124,6 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 			bundle->uthreads[i].uthread = NULL;
 			bundle->used--;
 			
-			log_debug("removed uthread %p from bundle slot %d (kthread %d)",
-				 th, i, myk_index());
 			return 0;
 		}
 	}
@@ -290,6 +292,52 @@ void lame_bundle_print(struct kthread *k)
 }
 
 /**
+ * lame_bundle_set_ready_false_all - sets thread_ready to false for all uthreads in the bundle
+ * @k: the kthread
+ *
+ * This function sets thread_ready = false for all uthreads in the bundle.
+ * This is called when uthreads are added to the bundle to maintain the illusion
+ * that they are "running" from Caladan's perspective.
+ */
+void lame_bundle_set_ready_false_all(struct kthread *k)
+{
+	struct lame_bundle *bundle = &k->lame_bundle;
+	unsigned int i;
+
+	for (i = 0; i < bundle->size; i++) {
+		if (bundle->uthreads[i].present) {
+			bundle->uthreads[i].uthread->thread_ready = false;
+		}
+	}
+
+	log_debug("[LAME][kthread:%d] Set thread_ready=false for all %u uthreads in bundle",
+		 myk_index(), bundle->used);
+}
+
+/**
+ * lame_bundle_set_running_true_all - sets thread_running to true for all uthreads in the bundle
+ * @k: the kthread
+ *
+ * This function sets thread_running = true for all uthreads in the bundle.
+ * This is called when uthreads are added to the bundle to maintain the illusion
+ * that they are "running" from Caladan's perspective.
+ */
+void lame_bundle_set_running_true_all(struct kthread *k)
+{
+	struct lame_bundle *bundle = &k->lame_bundle;
+	unsigned int i;
+
+	for (i = 0; i < bundle->size; i++) {
+		if (bundle->uthreads[i].present) {
+			bundle->uthreads[i].uthread->thread_running = true;
+		}
+	}
+
+	log_debug("[LAME][kthread:%d] Set thread_running=true for all %u uthreads in bundle",
+		 myk_index(), bundle->used);
+}
+
+/**
  * lame_handle - handles LAME exception and performs context switch
  * 
  * This function is called from the assembly __lame_entry after volatile
@@ -330,6 +378,9 @@ __always_inline void lame_handle(void)
 
 	log_info("[LAME][kthread:%d][func:lame_handle] switching from uthread %p to %p",
 		  myk_index(), cur_th, next_th);
+
+	/* Update __self to point to the new uthread */
+	perthread_store(__self, next_th);
 
 	/* Call __lame_jmp_thread_direct to perform context switch */
 	__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
