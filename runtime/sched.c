@@ -420,6 +420,14 @@ static __noreturn __noinline void schedule(void)
 	if (l->rq_head != l->rq_tail)
 		goto done;
 
+	/* linanqinqin */
+	/* then if the lame bundle is not empty, run the first available uthread in the bundle*/
+	if (l->lame_bundle.used > 0) {
+		th = lame_bundle_get_next_uthread(l);
+		jmp_thread(th);
+	}
+	/* end*/
+
 again:
 
 	if (unlikely(!mbufq_empty(&l->txpktq_overflow)))
