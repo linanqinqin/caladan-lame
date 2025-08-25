@@ -281,16 +281,21 @@ void lame_bundle_print(struct kthread *k)
 	char log_buf[512];
 	int offset;
 
+	/* linanqinqin */
 	offset = snprintf(log_buf, sizeof(log_buf), 
-			"[LAME][BUNDLE][kthread:%d] size=%u, used=%u, active=%u, enabled=%d: ", 
+			"[LAME][BUNDLE][kthread:%d][size:%u][used:%u][active:%u][enabled:%d][bundle:", 
 			myk_index(), bundle->size, bundle->used, bundle->active, bundle->enabled);
 
-	/* Print each uthread wrapper entry */
+	/* Print each uthread wrapper entry in format: <uthread0><uthread1>...<uthreadn-1> */
 	for (i = 0; i < bundle->size && offset < (int)sizeof(log_buf) - 1; i++) {
 		struct lame_uthread_wrapper *wrapper = &bundle->uthreads[i];
 		offset += snprintf(log_buf + offset, sizeof(log_buf) - offset, 
-				  "[%p]", wrapper->uthread);
+				  "<%p>", wrapper->uthread);
 	}
+
+	/* Close the bundle bracket */
+	offset += snprintf(log_buf + offset, sizeof(log_buf) - offset, "]");
+	/* end */
 
 	log_info("%s", log_buf); 
 }
