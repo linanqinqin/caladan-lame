@@ -13,9 +13,9 @@
 #include <stdbool.h>
 
 #define MAX_LINE_LEN 1024
-#define MAX_KTHREADS 100
 #define MAX_BUNDLE_SIZE 32
-#define MAX_BUNDLE_HISTORY 1000
+#define INITIAL_KTHREADS 10
+#define INITIAL_BUNDLE_HISTORY 50
 
 typedef struct {
     char *bundle_str;
@@ -29,31 +29,40 @@ typedef struct {
 
 typedef struct {
     int kthread_id;
-    bundle_info_t bundles[MAX_BUNDLE_HISTORY];
+    bundle_info_t *bundles;
     int bundle_count;
+    int bundle_capacity;
     bool validation_errors;
-    bool *entry_errors;  // Track which entries have errors
+    bool *entry_errors;
 } kthread_bundle_t;
 
 typedef struct {
-    kthread_bundle_t kthreads[MAX_KTHREADS];
+    kthread_bundle_t *kthreads;
     int kthread_count;
-    char *filtered_lines[MAX_BUNDLE_HISTORY];
-    int filtered_line_count;
+    int kthread_capacity;
 } parse_state_t;
 
 /* Initialize parse state */
 void init_parse_state(parse_state_t *state) {
     state->kthread_count = 0;
-    state->filtered_line_count = 0;
-    for (int i = 0; i < MAX_KTHREADS; i++) {
+    state->kthread_capacity = INITIAL_KTHREADS;
+    state->kthreads = malloc(state->kthread_capacity * sizeof(kthread_bundle_t));
+    if (!state->kthreads) {
+        fprintf(stderr, "Failed to allocate kthreads array\n");
+        exit(1);
+    }
+    
+    for (int i = 0; i < state->kthread_capacity; i++) {
         state->kthreads[i].kthread_id = -1;
         state->kthreads[i].bundle_count = 0;
+        state->kthreads[i].bundle_capacity = INITIAL_BUNDLE_HISTORY;
         state->kthreads[i].validation_errors = false;
-        state->kthreads[i].entry_errors = NULL; // Initialize entry_errors
-    }
-    for (int i = 0; i < MAX_BUNDLE_HISTORY; i++) {
-        state->filtered_lines[i] = NULL;
+        state->kthreads[i].entry_errors = NULL;
+        state->kthreads[i].bundles = malloc(state->kthreads[i].bundle_capacity * sizeof(bundle_info_t));
+        if (!state->kthreads[i].bundles) {
+            fprintf(stderr, "Failed to allocate bundles array for kthread %d\n", i);
+            exit(1);
+        }
     }
 }
 
@@ -66,18 +75,40 @@ kthread_bundle_t *get_kthread_bundle(parse_state_t *state, int kthread_id) {
         }
     }
     
-    // Create new kthread if space available
-    if (state->kthread_count < MAX_KTHREADS) {
-        kthread_bundle_t *kthread = &state->kthreads[state->kthread_count];
-        kthread->kthread_id = kthread_id;
-        kthread->bundle_count = 0;
-        kthread->validation_errors = false;
-        kthread->entry_errors = NULL; // Initialize entry_errors for new kthread
-        state->kthread_count++;
-        return kthread;
+    // Expand kthreads array if needed
+    if (state->kthread_count >= state->kthread_capacity) {
+        int new_capacity = state->kthread_capacity * 2;
+        kthread_bundle_t *new_kthreads = realloc(state->kthreads, new_capacity * sizeof(kthread_bundle_t));
+        if (!new_kthreads) {
+            fprintf(stderr, "Failed to expand kthreads array\n");
+            return NULL;
+        }
+        state->kthreads = new_kthreads;
+        
+        // Initialize new kthreads
+        for (int i = state->kthread_capacity; i < new_capacity; i++) {
+            state->kthreads[i].kthread_id = -1;
+            state->kthreads[i].bundle_count = 0;
+            state->kthreads[i].bundle_capacity = INITIAL_BUNDLE_HISTORY;
+            state->kthreads[i].validation_errors = false;
+            state->kthreads[i].entry_errors = NULL;
+            state->kthreads[i].bundles = malloc(state->kthreads[i].bundle_capacity * sizeof(bundle_info_t));
+            if (!state->kthreads[i].bundles) {
+                fprintf(stderr, "Failed to allocate bundles array for kthread %d\n", i);
+                return NULL;
+            }
+        }
+        state->kthread_capacity = new_capacity;
     }
     
-    return NULL;
+    // Create new kthread
+    kthread_bundle_t *kthread = &state->kthreads[state->kthread_count];
+    kthread->kthread_id = kthread_id;
+    kthread->bundle_count = 0;
+    kthread->validation_errors = false;
+    kthread->entry_errors = NULL;
+    state->kthread_count++;
+    return kthread;
 }
 
 /* Parse bundle string to extract uthread addresses */
@@ -291,14 +322,21 @@ bool validate_kthread_lifecycle(kthread_bundle_t *kthread) {
 
 /* Add bundle to kthread history */
 void add_bundle_to_kthread(kthread_bundle_t *kthread, const bundle_info_t *bundle) {
-    if (kthread->bundle_count >= MAX_BUNDLE_HISTORY) {
-        printf("WARNING: Too many bundle entries for kthread %d\n", kthread->kthread_id);
-        return;
+    // Expand bundles array if needed
+    if (kthread->bundle_count >= kthread->bundle_capacity) {
+        int new_capacity = kthread->bundle_capacity * 2;
+        bundle_info_t *new_bundles = realloc(kthread->bundles, new_capacity * sizeof(bundle_info_t));
+        if (!new_bundles) {
+            printf("WARNING: Failed to expand bundles array for kthread %d\n", kthread->kthread_id);
+            return;
+        }
+        kthread->bundles = new_bundles;
+        kthread->bundle_capacity = new_capacity;
     }
     
     // Allocate entry_errors array if this is the first entry
     if (kthread->bundle_count == 0) {
-        kthread->entry_errors = calloc(MAX_BUNDLE_HISTORY, sizeof(bool));
+        kthread->entry_errors = calloc(kthread->bundle_capacity, sizeof(bool));
     }
     
     bundle_info_t *new_bundle = &kthread->bundles[kthread->bundle_count];
@@ -353,19 +391,23 @@ void cleanup_parse_state(parse_state_t *state) {
                 }
             }
         }
+        if (kthread->bundles) {
+            free(kthread->bundles);
+        }
         if (kthread->entry_errors) {
             free(kthread->entry_errors);
         }
     }
     
-    for (int i = 0; i < state->filtered_line_count; i++) {
-        if (state->filtered_lines[i]) {
-            free(state->filtered_lines[i]);
-        }
+    if (state->kthreads) {
+        free(state->kthreads);
     }
 }
 
 int main() {
+    printf("LAME Bundle Log Parser - Starting\n");
+    fflush(stdout);
+    
     parse_state_t state;
     char line[MAX_LINE_LEN];
     int line_num = 0;
@@ -381,25 +423,18 @@ int main() {
         
         // Look for LAME bundle lines
         if (strstr(line, "[LAME][BUNDLE]")) {
-            printf("Found bundle line %d: %s", line_num, line);
             bundle_info_t bundle;
             if (parse_bundle_line(line, &bundle)) {
-                printf("Parsed bundle: size=%d used=%d bundle_str=%s\n", 
-                       bundle.size, bundle.used, bundle.bundle_str ? bundle.bundle_str : "NULL");
-                
                 // Extract kthread ID from the line
                 const char *kthread_pattern = "[kthread:";
                 const char *kthread_start = strstr(line, kthread_pattern);
                 if (kthread_start) {
                     kthread_start += strlen(kthread_pattern);
                     int kthread_id = atoi(kthread_start);
-                    printf("Extracted kthread_id: %d\n", kthread_id);
                     
                     // Get kthread bundle info first
                     kthread_bundle_t *kthread = get_kthread_bundle(&state, kthread_id);
                     if (kthread) {
-                        printf("Got kthread %d, bundle_count: %d\n", kthread_id, kthread->bundle_count);
-                        
                         // Validate bundle consistency
                         bool bundle_valid = validate_bundle(&bundle, line_num);
                         if (!bundle_valid) {
@@ -408,20 +443,13 @@ int main() {
                         
                         // Add to kthread history
                         add_bundle_to_kthread(kthread, &bundle);
-                        printf("Added bundle to kthread %d, new count: %d\n", kthread_id, kthread->bundle_count);
                         
                         // Mark error after adding to history (so we have the correct index)
                         if (!bundle_valid && kthread->entry_errors) {
                             kthread->entry_errors[kthread->bundle_count - 1] = true;
                         }
-                    } else {
-                        printf("Failed to get kthread for id %d\n", kthread_id);
                     }
-                } else {
-                    printf("Could not find kthread pattern in line\n");
                 }
-            } else {
-                printf("Failed to parse bundle line\n");
             }
             
             // Free bundle string
