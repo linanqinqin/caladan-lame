@@ -24,7 +24,7 @@ matmul_src = matmul.c
 matmul_obj = $(matmul_src:.c=.o)
 
 # must be first
-all: hello_world hello_network hello_threads int parse_lame parse_bundle
+all: hello_world threads network int parse_lame parse_bundle matmul
 
 lib_shim = $(ROOT_PATH)/shim/libshim.a -ldl
 
@@ -54,7 +54,7 @@ matmul: $(matmul_obj)
 	$(CC) $(CFLAGS) -o $@ $(matmul_obj)
 
 # general build rules for all targets
-src = $(hello_world_src) $(threads_src) $(network_src) $(int_src) $(parse_lame_src) $(matmul_src)
+src = $(hello_world_src) $(threads_src) $(network_src) $(int_src) $(parse_lame_src) $(parse_bundle_src) $(matmul_src)
 obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 
