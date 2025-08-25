@@ -365,6 +365,7 @@ static __noreturn __noinline void schedule(void)
 					perthread_get_stable(__self), myk_index());
 		/* this remove could be duplicate, but it catches the case where schedule is called directly */
 		lame_bundle_remove_uthread(l, perthread_get_stable(__self));
+		lame_sched_bundle_dismantle(l);
 		lame_bundle_print(l);
 		/* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
@@ -422,10 +423,10 @@ static __noreturn __noinline void schedule(void)
 
 	/* linanqinqin */
 	/* then if the lame bundle is not empty, run the first available uthread in the bundle*/
-	if (l->lame_bundle.used > 0) {
-		th = lame_sched_get_next_uthread(l);
-		jmp_thread(th);
-	}
+	// if (l->lame_bundle.used > 0) {
+	// 	th = lame_sched_get_next_uthread(l);
+	// 	jmp_thread(th);
+	// }
 	/* end*/
 
 again:
@@ -555,28 +556,32 @@ static __always_inline void enter_schedule(thread_t *curth)
 	uint64_t now_tsc;
 
 	/* linanqinqin */
+	/* 
+	 * dismantle the lame bundle - two-step process:
+	 * 1. remove the current uthread from the lame bundle
+	 * 2. remove the remaining uthreads (if any)
+	 *
+	 * The reason for this is that the current uthread should be handled by Caladan's 
+	 * regular scheduling logic unchanged, while the remaining uthreads were picked 
+	 * from the runqueue by LAME and thus should be returned to the runqueue
+	 * by LAME as well.
+	 * */
 	lame_sched_disable(k); // disable lame scheduling
-	/* end */
-
-	assert_preempt_disabled();
-
-	/* linanqinqin */
 	/* LAME: Log when uthread enters scheduler (descheduled from kthread) */
 	log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:enter_schedule]", 
 		  curth, myk_index());
-	/* end */	
+	lame_bundle_remove_uthread(k, curth); // remove the current uthread from the lame bundle
+	lame_sched_bundle_dismantle(k); // dismantle the lame bundle (if there is still uthreads)
+	lame_bundle_print(k); // print the lame bundle
+	/* end */
+
+	assert_preempt_disabled();
 
 	/* prepare current thread for sleeping */
 	curth->last_cpu = k->curr_cpu;
 
 	spin_lock(&k->lock);
 	now_tsc = rdtsc();
-
-	/* linanqinqin */
-	// insert the logic for removing the uthread from the lame bundle
-	lame_bundle_remove_uthread(k, curth);
-	lame_bundle_print(k); // print the lame bundle
-	/* end */
 
 	/* slow path: switch from the uthread stack to the runtime stack */
 	if (k->rq_head == k->rq_tail ||
@@ -645,6 +650,9 @@ static __always_inline void enter_schedule(thread_t *curth)
 	if (unlikely(th == curth)) {
 		th->thread_ready = false;
 		preempt_enable();
+		/* linanqinqin*/
+		lame_sched_enable(k);
+		/* end */
 		return;
 	}
 

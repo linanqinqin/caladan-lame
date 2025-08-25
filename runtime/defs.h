@@ -438,6 +438,7 @@ extern void lame_bundle_cleanup(struct kthread *k);
 extern int lame_bundle_add_uthread(struct kthread *k, thread_t *th, bool set_active);
 extern int lame_bundle_remove_uthread(struct kthread *k, thread_t *th);
 extern unsigned int lame_bundle_get_used_count(struct kthread *k);
+extern void lame_sched_bundle_dismantle(struct kthread *k);
 extern void lame_bundle_print(struct kthread *k);
 extern void lame_bundle_set_ready_false_all(struct kthread *k);
 extern void lame_bundle_set_running_true_all(struct kthread *k);
