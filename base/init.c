@@ -12,22 +12,15 @@
 
 bool base_init_done __aligned(CACHE_LINE_SIZE);
 
-/* linanqinqin */
-static void log_flush(void)
-{
-	/* Force flush all output before exit */
-	fflush(stdout);
-	fflush(stderr);
-}
-
 void __weak init_shutdown(int status)
 {
 	log_info("init: shutting down -> %s",
 		 status == EXIT_SUCCESS ? "SUCCESS" : "FAILURE");
+	/* linanqinqin */
 	log_flush();
+	/* end */
 	exit(status);
 }
-/* end */
 
 /* we initialize these early subsystems by hand */
 static int init_internal(void)

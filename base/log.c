@@ -49,6 +49,20 @@ void logk(int level, const char *fmt, ...)
 		fflush(stdout);
 }
 
+/* linanqinqin */
+/**
+ * log_flush - forces flush of all output streams
+ * 
+ * This function ensures all buffered output is written to the console.
+ * Useful for ensuring log messages are visible before program termination.
+ */
+void log_flush(void)
+{
+	fflush(stdout);
+	fflush(stderr);
+}
+/* end */
+
 #define MAX_CALL_DEPTH	256
 void logk_backtrace(void)
 {

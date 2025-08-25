@@ -13,6 +13,7 @@
 extern void logk(int level, const char *fmt, ...)
 	__attribute__((__format__ (__printf__, 2, 3)));
 extern void logk_backtrace(void);
+extern void log_flush(void);
 
 /* forces format checking */
 #define no_logk(level, fmt, ...) \
