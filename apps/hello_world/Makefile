@@ -17,11 +17,14 @@ int_obj = $(int_src:.c=.o)
 parse_lame_src = parse_lame.c
 parse_lame_obj = $(parse_lame_src:.c=.o)
 
+parse_bundle_src = parse_bundle.c
+parse_bundle_obj = $(parse_bundle_src:.c=.o)
+
 matmul_src = matmul.c
 matmul_obj = $(matmul_src:.c=.o)
 
 # must be first
-all: hello_world threads network int parse_lame matmul
+all: hello_world hello_network hello_threads int parse_lame parse_bundle
 
 lib_shim = $(ROOT_PATH)/shim/libshim.a -ldl
 
@@ -44,6 +47,9 @@ int: $(int_obj) $(RUNTIME_DEPS)
 parse_lame: $(parse_lame_obj)
 	$(CC) $(CFLAGS) -o $@ $(parse_lame_obj)
 
+parse_bundle: $(parse_bundle_obj)
+	$(CC) $(CFLAGS) -o $@ $(parse_bundle_obj)
+
 matmul: $(matmul_obj)
 	$(CC) $(CFLAGS) -o $@ $(matmul_obj)
 
@@ -65,4 +71,4 @@ endif
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(dep) hello_world threads network int parse_lame matmul 
+	rm -f $(obj) $(dep) hello_world threads network int parse_lame parse_bundle matmul 
