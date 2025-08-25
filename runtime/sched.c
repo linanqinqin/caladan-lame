@@ -493,7 +493,7 @@ done:
 	ACCESS_ONCE(l->q_ptrs->rq_tail)++;
 
 	/* linanqinqin */
-	BUG_ON(lame_bundle_add_uthread(l, th) != 0); // add the first uthread to the bundle
+	BUG_ON(lame_bundle_add_uthread(l, th, true) != 0); // add the first uthread to the bundle
 	
 	/* Try to add additional uthreads from the runqueue */
 	thread_t *bundle_tmp[LAME_BUNDLE_SIZE_MAX]; // temp array to store additional uthreads for updating run_start_tsc later
@@ -504,7 +504,7 @@ done:
 		bundle_th = l->rq[l->rq_tail++ % RUNTIME_RQ_SIZE];
 		ACCESS_ONCE(l->q_ptrs->rq_tail)++;
 		/* add the next uthread to the bundle */
-		BUG_ON(lame_bundle_add_uthread(l, bundle_th) != 0); 	
+		BUG_ON(lame_bundle_add_uthread(l, bundle_th, false) != 0); 	
 		bundle_tmp[bundle_th_added++] = bundle_th;
 		/* log the addition of the uthread to the bundle */
 		// log_info("[LAME][kthread:%d][func:schedule] Added uthread %p to bundle",
@@ -600,7 +600,7 @@ static __always_inline void enter_schedule(thread_t *curth)
 	ACCESS_ONCE(k->q_ptrs->rq_tail)++;
 
 	/* linanqinqin */
-	BUG_ON(lame_bundle_add_uthread(k, th) != 0); // add the first uthread to the bundle
+	BUG_ON(lame_bundle_add_uthread(k, th, true) != 0); // add the first uthread to the bundle
 	
 	/* Try to add additional uthreads from the runqueue */
 	for (unsigned int i = 0; (i < k->lame_bundle.size-k->lame_bundle.used) && (k->rq_head != k->rq_tail); i++) {
@@ -610,7 +610,7 @@ static __always_inline void enter_schedule(thread_t *curth)
 		ACCESS_ONCE(k->q_ptrs->rq_tail)++;
 
 		/* add the next uthread to the bundle */
-		BUG_ON(lame_bundle_add_uthread(k, bundle_th) != 0); 
+		BUG_ON(lame_bundle_add_uthread(k, bundle_th, false) != 0); 
 
 		/* update run_start_tsc here; this is not the cleanest way but should work */
 		bundle_th->run_start_tsc = perthread_get_stable(last_tsc);

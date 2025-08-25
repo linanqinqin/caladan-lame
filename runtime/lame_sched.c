@@ -57,17 +57,18 @@ void lame_bundle_cleanup(struct kthread *k)
  * lame_bundle_add_uthread - adds a uthread to the bundle
  * @k: the kthread
  * @th: the uthread to add
+ * @set_active: if true, set this uthread as the active one in the bundle
  *
  * Returns 0 if successful, or -ENOSPC if bundle is full, or -EINVAL if invalid.
  */
-int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
+int lame_bundle_add_uthread(struct kthread *k, thread_t *th, bool set_active)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
 	int first_empty_slot = -1;
 
-	log_info("[LAME][kthread:%d][func:lame_bundle_add_uthread] adding uthread %p",
-			myk_index(), th);
+	log_info("[LAME][kthread:%d][func:lame_bundle_add_uthread] adding uthread %p (set_active=%d)",
+			myk_index(), th, set_active);
 
 	/* Iterate through the bundle to check for duplicates and find first empty slot */
 	for (i = 0; i < bundle->size; i++) {
@@ -99,6 +100,13 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th)
 	bundle->uthreads[first_empty_slot].cycles = 0;
 	bundle->uthreads[first_empty_slot].lame_count = 0;
 	bundle->used++;
+	
+	/* If this is the uthread that will run next, update the active index */
+	if (set_active) {
+		bundle->active = first_empty_slot;
+		log_info("[LAME][kthread:%d][func:lame_bundle_add_uthread] set active index to %d for uthread %p",
+				myk_index(), first_empty_slot, th);
+	}
 	
 	return 0;
 }

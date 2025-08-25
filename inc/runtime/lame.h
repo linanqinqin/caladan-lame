@@ -10,7 +10,7 @@
 struct kthread;
 
 /* LAME bundle management functions */
-extern int lame_bundle_add_uthread(struct kthread *k, thread_t *th);
+extern int lame_bundle_add_uthread(struct kthread *k, thread_t *th, bool set_active);
 extern int lame_bundle_remove_uthread(struct kthread *k, thread_t *th);
 extern unsigned int lame_bundle_get_used_count(struct kthread *k);
 
