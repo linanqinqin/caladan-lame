@@ -381,31 +381,47 @@ int main() {
         
         // Look for LAME bundle lines
         if (strstr(line, "[LAME][BUNDLE]")) {
+            printf("Found bundle line %d: %s", line_num, line);
             bundle_info_t bundle;
             if (parse_bundle_line(line, &bundle)) {
+                printf("Parsed bundle: size=%d used=%d bundle_str=%s\n", 
+                       bundle.size, bundle.used, bundle.bundle_str ? bundle.bundle_str : "NULL");
+                
                 // Extract kthread ID from the line
                 const char *kthread_pattern = "[kthread:";
                 const char *kthread_start = strstr(line, kthread_pattern);
                 if (kthread_start) {
                     kthread_start += strlen(kthread_pattern);
                     int kthread_id = atoi(kthread_start);
+                    printf("Extracted kthread_id: %d\n", kthread_id);
                     
                     // Get kthread bundle info first
                     kthread_bundle_t *kthread = get_kthread_bundle(&state, kthread_id);
                     if (kthread) {
+                        printf("Got kthread %d, bundle_count: %d\n", kthread_id, kthread->bundle_count);
+                        
                         // Validate bundle consistency
-                        if (!validate_bundle(&bundle, line_num)) {
+                        bool bundle_valid = validate_bundle(&bundle, line_num);
+                        if (!bundle_valid) {
                             printf("Bundle validation failed at line %d\n", line_num);
-                            // Mark this entry as having an error
-                            if (kthread->entry_errors) {
-                                kthread->entry_errors[kthread->bundle_count] = true;
-                            }
                         }
                         
                         // Add to kthread history
                         add_bundle_to_kthread(kthread, &bundle);
+                        printf("Added bundle to kthread %d, new count: %d\n", kthread_id, kthread->bundle_count);
+                        
+                        // Mark error after adding to history (so we have the correct index)
+                        if (!bundle_valid && kthread->entry_errors) {
+                            kthread->entry_errors[kthread->bundle_count - 1] = true;
+                        }
+                    } else {
+                        printf("Failed to get kthread for id %d\n", kthread_id);
                     }
+                } else {
+                    printf("Could not find kthread pattern in line\n");
                 }
+            } else {
+                printf("Failed to parse bundle line\n");
             }
             
             // Free bundle string
