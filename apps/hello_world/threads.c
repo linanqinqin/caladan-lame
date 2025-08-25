@@ -13,14 +13,16 @@
 #include <sys/time.h>
 #include <time.h>
 
-#define NUM_THREADS 4
-#define MATRIX_SIZE 128  // Reduced from 512 to 128 to avoid memory pressure
+#define NUM_THREADS_MAX 256
+#define MIN_MATRIX_SIZE 128
+#define MAX_MATRIX_SIZE 512
 
 // Thread arguments structure
 typedef struct {
     int thread_id;
     int *shared_counter;
     pthread_mutex_t *counter_mutex;
+    int matrix_size;  // Each thread gets its own matrix size
 } thread_args_t;
 
 /* linanqinqin */
@@ -72,35 +74,37 @@ void *worker_thread(void *arg)
 {
     thread_args_t *args = (thread_args_t *)arg;
     int thread_id = args->thread_id;
+    int matrix_size = args->matrix_size;
     
     printf("Hello from worker thread %d!\n", thread_id);
     
     /* linanqinqin */
     // Perform matrix multiplication computation
-    int *A = malloc(MATRIX_SIZE * MATRIX_SIZE * sizeof(int));
-    int *B = malloc(MATRIX_SIZE * MATRIX_SIZE * sizeof(int));
-    int *C = malloc(MATRIX_SIZE * MATRIX_SIZE * sizeof(int));
+    int *A = malloc(matrix_size * matrix_size * sizeof(int));
+    int *B = malloc(matrix_size * matrix_size * sizeof(int));
+    int *C = malloc(matrix_size * matrix_size * sizeof(int));
     
     if (!A || !B || !C) {
-        printf("Thread %d: Failed to allocate memory for matrices\n", thread_id);
+        printf("Thread %d: Failed to allocate memory for %dx%d matrices\n", thread_id, matrix_size, matrix_size);
         free(A);
         free(B);
         free(C);
         return NULL;
     }
     
-    // Generate random matrices
-    generate_matrix_A(A, MATRIX_SIZE);
-    generate_matrix_B(B, MATRIX_SIZE);
+    // Generate deterministic matrices based on size
+    generate_matrix_A(A, matrix_size);
+    generate_matrix_B(B, matrix_size);
     
-    printf("Thread %d: Starting %dx%d matrix multiplication...\n", thread_id, MATRIX_SIZE, MATRIX_SIZE);
+    printf("Thread %d: Starting %dx%d matrix multiplication...\n", thread_id, matrix_size, matrix_size);
     
     // Perform matrix multiplication
-    matrix_multiply(A, B, C, MATRIX_SIZE);
+    matrix_multiply(A, B, C, matrix_size);
     
     // Verify result (sum of all elements)
-    long long result_sum = verify_matrix_multiply(A, B, C, MATRIX_SIZE);
-    printf("Thread %d: Matrix multiplication completed. Result sum: %lld\n", thread_id, result_sum);
+    long long result_sum = verify_matrix_multiply(A, B, C, matrix_size);
+    printf("Thread %d: Matrix multiplication completed. [thread_id=%d][size=%d][sum=%lld]\n", 
+           thread_id, thread_id, matrix_size, result_sum);
     
     // Clean up
     free(A);
@@ -121,48 +125,96 @@ void *worker_thread(void *arg)
 
 int main(int argc, char *argv[])
 {
-    pthread_t threads[NUM_THREADS];
-    thread_args_t thread_args[NUM_THREADS];
+    int num_threads;
+    pthread_t *threads;
+    thread_args_t *thread_args;
     int shared_counter = 0;
     pthread_mutex_t counter_mutex;
     int i, ret;
     
+    /* linanqinqin */
+    // Check command line arguments
+    if (argc != 2) {
+        printf("Usage: %s <number_of_threads>\n", argv[0]);
+        printf("Example: %s 4\n", argv[0]);
+        return 1;
+    }
+    
+    num_threads = atoi(argv[1]);
+    if (num_threads <= 0 || num_threads > NUM_THREADS_MAX) {
+        printf("Error: Number of threads must be between 1 and %d\n", NUM_THREADS_MAX);
+        return 1;
+    }
+    
+    // Seed random number generator for matrix sizes
+    srand(time(NULL));
+    /* end */
+    
     printf("Hello, World from Caladan with POSIX threading!\n");
-    printf("Spawning %d worker threads for %dx%d matrix multiplication...\n", NUM_THREADS, MATRIX_SIZE, MATRIX_SIZE);
+    printf("Spawning %d worker threads with random matrix sizes (%d-%d)...\n", 
+           num_threads, MIN_MATRIX_SIZE, MAX_MATRIX_SIZE);
+    
+    /* linanqinqin */
+    // Allocate arrays for threads and arguments
+    threads = malloc(num_threads * sizeof(pthread_t));
+    thread_args = malloc(num_threads * sizeof(thread_args_t));
+    
+    if (!threads || !thread_args) {
+        printf("Failed to allocate memory for threads\n");
+        free(threads);
+        free(thread_args);
+        return 1;
+    }
+    /* end */
     
     // Initialize mutex
     if (pthread_mutex_init(&counter_mutex, NULL) != 0) {
         printf("Failed to initialize mutex\n");
+        free(threads);
+        free(thread_args);
         return 1;
     }
     
     // Create threads
-    for (i = 0; i < NUM_THREADS; i++) {
+    for (i = 0; i < num_threads; i++) {
         thread_args[i].thread_id = i;
         thread_args[i].shared_counter = &shared_counter;
         thread_args[i].counter_mutex = &counter_mutex;
+        /* linanqinqin */
+        // Generate random matrix size for this thread
+        thread_args[i].matrix_size = MIN_MATRIX_SIZE + (rand() % (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1));
+        printf("Thread %d will use matrix size: %dx%d\n", i, thread_args[i].matrix_size, thread_args[i].matrix_size);
+        /* end */
         
         ret = pthread_create(&threads[i], NULL, worker_thread, &thread_args[i]);
         if (ret != 0) {
             printf("Failed to create thread %d\n", i);
+            pthread_mutex_destroy(&counter_mutex);
+            free(threads);
+            free(thread_args);
             return 1;
         }
     }
     
     // Wait for all threads to complete
-    for (i = 0; i < NUM_THREADS; i++) {
+    for (i = 0; i < num_threads; i++) {
         ret = pthread_join(threads[i], NULL);
         if (ret != 0) {
             printf("Failed to join thread %d\n", i);
+            pthread_mutex_destroy(&counter_mutex);
+            free(threads);
+            free(thread_args);
             return 1;
         }
     }
     
-    printf("All %d threads completed successfully!\n", NUM_THREADS);
+    printf("All %d threads completed successfully!\n", num_threads);
     printf("Final counter value: %d\n", shared_counter);
     
     // Clean up
     pthread_mutex_destroy(&counter_mutex);
+    free(threads);
+    free(thread_args);
     
     return 0;
 } 
