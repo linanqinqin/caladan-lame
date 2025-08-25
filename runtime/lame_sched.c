@@ -366,6 +366,7 @@ __always_inline void lame_handle(void)
 	if (!lame_sched_is_dynamically_enabled(k)) {
 		log_info("[LAME][kthread:%d][func:lame_handle] scheduling disabled",
 			myk_index());
+		preempt_enable();
 		return;
 	}
 
@@ -374,6 +375,7 @@ __always_inline void lame_handle(void)
 	if (!cur_th) {
 		log_info("[LAME][kthread:%d][func:lame_handle] no current uthread",
 			myk_index());
+		preempt_enable();
 		return;
 	}
 
@@ -382,6 +384,7 @@ __always_inline void lame_handle(void)
 	if (!next_th) {
 		log_info("[LAME][kthread:%d][func:lame_handle] no next uthread available",
 			myk_index());
+		preempt_enable();
 		return;
 	}
 
