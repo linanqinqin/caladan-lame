@@ -390,18 +390,19 @@ int main() {
                     kthread_start += strlen(kthread_pattern);
                     int kthread_id = atoi(kthread_start);
                     
-                    // Validate bundle consistency
-                    if (!validate_bundle(&bundle, line_num)) {
-                        printf("Bundle validation failed at line %d\n", line_num);
-                        // Mark this entry as having an error
-                        if (kthread && kthread->entry_errors) {
-                            kthread->entry_errors[kthread->bundle_count] = true;
-                        }
-                    }
-                    
-                    // Add to kthread history
+                    // Get kthread bundle info first
                     kthread_bundle_t *kthread = get_kthread_bundle(&state, kthread_id);
                     if (kthread) {
+                        // Validate bundle consistency
+                        if (!validate_bundle(&bundle, line_num)) {
+                            printf("Bundle validation failed at line %d\n", line_num);
+                            // Mark this entry as having an error
+                            if (kthread->entry_errors) {
+                                kthread->entry_errors[kthread->bundle_count] = true;
+                            }
+                        }
+                        
+                        // Add to kthread history
                         add_bundle_to_kthread(kthread, &bundle);
                     }
                 }
