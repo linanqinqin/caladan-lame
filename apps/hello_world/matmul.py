@@ -88,7 +88,7 @@ def main():
             
             print(f"  Expected sum: {expected_sum}")
             print(f"  Status: {status}")
-            print(f"  Difference: {reported_sum - expected_sum}")
+            # print(f"  Difference: {reported_sum - expected_sum}")
             print()
             
             results.append({

@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
                 
                 printf("  Expected sum: %lld\n", expected_sum);
                 printf("  Status: %s\n", status);
-                printf("  Difference: %lld\n", reported_sum - expected_sum);
+                // printf("  Difference: %lld\n", reported_sum - expected_sum);
                 printf("\n");
                 
                 if (is_correct) {
