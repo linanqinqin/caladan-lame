@@ -171,7 +171,7 @@ static __noreturn void jmp_runtime_nosave(runtime_fn_t fn)
 	__jmp_runtime_nosave(fn, perthread_read(runtime_stack));
 }
 
-static void drain_overflow(struct kthread *l)
+void drain_overflow(struct kthread *l)
 {
 	thread_t *th;
 

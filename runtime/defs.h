@@ -432,6 +432,7 @@ BUILD_ASSERT(offsetof(struct kthread, lame_bundle) % CACHE_LINE_SIZE == 0);
 DECLARE_PERTHREAD(struct kthread *, mykthread);
 DECLARE_PERTHREAD(unsigned int, kthread_idx);
 
+/* linanqinqin */
 /* LAME bundle management functions */
 extern void lame_bundle_init(struct kthread *k);
 extern void lame_bundle_cleanup(struct kthread *k);
@@ -454,6 +455,10 @@ extern void lame_sched_disable(struct kthread *k);
 extern bool lame_sched_is_enabled(struct kthread *k);
 extern bool lame_sched_is_statically_enabled(struct kthread *k);
 extern bool lame_sched_is_dynamically_enabled(struct kthread *k);
+
+/* Runqueue management functions */
+extern void drain_overflow(struct kthread *k);
+/* end */
 
 /**
  * myk - returns the per-kernel-thread data
