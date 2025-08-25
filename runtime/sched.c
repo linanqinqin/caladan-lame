@@ -14,6 +14,9 @@
 #include <base/log.h>
 #include <runtime/sync.h>
 #include <runtime/thread.h>
+/* linanqinqin */
+#include <runtime/lame.h>
+/* end */
 
 #include "defs.h"
 
