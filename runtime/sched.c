@@ -14,9 +14,6 @@
 #include <base/log.h>
 #include <runtime/sync.h>
 #include <runtime/thread.h>
-/* linanqinqin */
-#include <runtime/lame.h>
-/* end */
 
 #include "defs.h"
 
@@ -426,7 +423,7 @@ static __noreturn __noinline void schedule(void)
 	/* linanqinqin */
 	/* then if the lame bundle is not empty, run the first available uthread in the bundle*/
 	if (l->lame_bundle.used > 0) {
-		th = lame_bundle_get_next_uthread(l);
+		th = lame_sched_get_next_uthread(l);
 		jmp_thread(th);
 	}
 	/* end*/
