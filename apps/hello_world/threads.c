@@ -23,6 +23,7 @@ typedef struct {
     int *shared_counter;
     pthread_mutex_t *counter_mutex;
     int matrix_size;  // Each thread gets its own matrix size
+    int enable_lame;  // Whether to enable LAME interrupts
 } thread_args_t;
 
 /* linanqinqin */
@@ -55,7 +56,9 @@ void matrix_multiply(int *A, int *B, int *C, int size) {
                 C[i * size + j] += (int)(temp % 1000000); // Keep result manageable
             }
         }
-        __asm__ volatile("int $0x1f"); // trigger LAME interrupt
+        if (enable_lame) { // Only trigger LAME interrupt if enabled
+            __asm__ volatile("int $0x1f"); // trigger LAME interrupt
+        }
     }
 }
 
@@ -126,6 +129,7 @@ void *worker_thread(void *arg)
 int main(int argc, char *argv[])
 {
     int num_threads;
+    int enable_lame;
     pthread_t *threads;
     thread_args_t *thread_args;
     int shared_counter = 0;
@@ -134,13 +138,17 @@ int main(int argc, char *argv[])
     
     /* linanqinqin */
     // Check command line arguments
-    if (argc != 2) {
-        printf("Usage: %s <number_of_threads>\n", argv[0]);
+    if (argc < 2 || argc > 3) {
+        printf("Usage: %s <number_of_threads> [enable_lame]\n", argv[0]);
         printf("Example: %s 4\n", argv[0]);
+        printf("Example: %s 4 1\n", argv[0]);
+        printf("  Second argument (any value) enables LAME interrupts\n");
         return 1;
     }
     
     num_threads = atoi(argv[1]);
+    enable_lame = (argc == 3);  // Enable LAME if second argument is present
+    
     if (num_threads <= 0 || num_threads > NUM_THREADS_MAX) {
         printf("Error: Number of threads must be between 1 and %d\n", NUM_THREADS_MAX);
         return 1;
@@ -153,6 +161,7 @@ int main(int argc, char *argv[])
     printf("Hello, World from Caladan with POSIX threading!\n");
     printf("Spawning %d worker threads with random matrix sizes (%d-%d)...\n", 
            num_threads, MIN_MATRIX_SIZE, MAX_MATRIX_SIZE);
+    printf("LAME interrupts: %s\n", enable_lame ? "ENABLED" : "DISABLED");
     
     /* linanqinqin */
     // Allocate arrays for threads and arguments
@@ -183,6 +192,7 @@ int main(int argc, char *argv[])
         /* linanqinqin */
         // Generate random matrix size for this thread
         thread_args[i].matrix_size = MIN_MATRIX_SIZE + (rand() % (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1));
+        thread_args[i].enable_lame = enable_lame;  // Pass LAME enable flag to thread
         printf("Thread %d will use matrix size: %dx%d\n", i, thread_args[i].matrix_size, thread_args[i].matrix_size);
         /* end */
         
