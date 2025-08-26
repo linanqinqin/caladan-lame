@@ -361,21 +361,28 @@ static __noreturn __noinline void schedule(void)
 	if (likely(perthread_get_stable(__self) != NULL)) {
 		/* linanqinqin */
 		/* LAME: Log when uthread is descheduled from kthread */
-		log_info("[LAME][kthread:%d][uthread:%p][sched:OFF][func:schedule]",
+		log_info("[LAME][kthread:%d][uthread:%p][func:schedule]",
 					myk_index(), perthread_get_stable(__self));
 		/* this remove could be duplicate, but it catches the case where schedule is called directly */
 		lame_bundle_remove_uthread(l, perthread_get_stable(__self));
-		lame_sched_bundle_dismantle_nolock(l);
-		lame_bundle_print(l);
 		/* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
 		perthread_get_stable(__self) = NULL;
 	}
 	/* linanqinqin */
 	else {
-		log_info("[LAME][kthread:%d][sched:OFF][func:schedule]",
+		log_info("[LAME][kthread:%d][func:schedule]",
 			myk_index());
 	}
+	/* end */
+
+	/* linanqinqin */
+	/* 
+	 * this remove could be duplicate, but it catches the case where schedule 
+	 * is called directly, e.g, thread_finish_exit 
+	 */
+	lame_sched_bundle_dismantle_nolock(l);
+	lame_bundle_print(l);
 	/* end */
 
 	/* update entry stat counters */
