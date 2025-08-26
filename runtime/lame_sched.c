@@ -354,6 +354,98 @@ void lame_bundle_set_running_true_all(struct kthread *k)
 		 myk_index());
 }
 
+__always_inline static void __lame_bundle_to_rq(struct kthread *k) 
+{
+	struct lame_bundle *bundle = &k->lame_bundle;
+	uint64_t now_tsc = rdtsc();
+
+	/* Iterate through all bundle slots */
+	for (unsigned int i = 0; i < bundle->size; i++) {
+		if (bundle->uthreads[i].present) {
+			thread_t *th = bundle->uthreads[i].uthread;
+			uint32_t rq_tail;
+			
+			/* Mark uthread as ready */
+			th->thread_ready = true;
+			th->thread_running = false;
+			th->ready_tsc = now_tsc;
+			
+			/* Add uthread back to runqueue (similar to thread_ready but without accounting) */
+			rq_tail = load_acquire(&k->rq_tail);
+			if (unlikely(k->rq_head - rq_tail >= RUNTIME_RQ_SIZE ||
+			             !list_empty_volatile(&k->rq_overflow))) {
+				/* Runqueue is full, add to overflow list */
+				assert(k->rq_head - rq_tail <= RUNTIME_RQ_SIZE);
+				list_add_tail(&k->rq_overflow, &th->link);
+				drain_overflow(k);
+				ACCESS_ONCE(k->q_ptrs->rq_head)++;
+			} else {
+				/* Add to main runqueue */
+				k->rq[k->rq_head % RUNTIME_RQ_SIZE] = th;
+				store_release(&k->rq_head, k->rq_head + 1);
+				if (k->rq_head - load_acquire(&k->rq_tail) == 1)
+					ACCESS_ONCE(k->q_ptrs->oldest_tsc) = th->ready_tsc;
+				ACCESS_ONCE(k->q_ptrs->rq_head)++;
+			}
+			
+			/* Clear the bundle slot */
+			bundle->uthreads[i].present = false;
+			bundle->uthreads[i].uthread = NULL;
+			bundle->uthreads[i].cycles = 0;
+			bundle->uthreads[i].lame_count = 0;
+			
+			log_debug("[LAME][kthread:%d][func:lame_sched_bundle_dismantle] returned uthread %p to runqueue",
+				 myk_index(), th);
+		}
+	}
+}
+
+/**
+ * lame_sched_bundle_dismantle - dismantles the bundle and returns all uthreads to runqueue
+ * @k: the kthread
+ *
+ * This function is called when a uthread is descheduled to dismantle the entire bundle.
+ * It removes all uthreads from the bundle and adds them back to Caladan's runqueue.
+ * This ensures bundle lifecycle is tied to Caladan's scheduling lifecycle.
+ *
+ * The function does not perform accounting or statistics as those are handled by
+ * Caladan's regular descheduling procedure.
+ */
+void lame_sched_bundle_dismantle(struct kthread *k)
+{
+	if (k->lame_bundle.used >= 1) {
+		spin_lock(&k->lock);
+		__lame_bundle_to_rq(k);
+		spin_unlock(&k->lock);
+	}
+
+	/* Reset bundle state */
+	bundle->used = 0;
+	bundle->active = 0;
+	bundle->total_cycles = 0;
+	bundle->total_lames = 0;
+}
+
+/**
+ * lame_sched_bundle_dismantle - dismantles the bundle and returns all uthreads to runqueue
+ * @k: the kthread
+ *
+ * This function is identical to lame_sched_bundle_dismantle, but assumes the lock is already held.
+ */
+void lame_sched_bundle_dismantle_nolock(struct kthread *k)
+{
+	assert_spin_lock_held(&k->lock);
+
+	if (k->lame_bundle.used >= 1) {
+		__lame_bundle_to_rq(k);
+	}
+
+	/* Reset bundle state */
+	bundle->used = 0;
+	bundle->active = 0;
+	bundle->total_cycles = 0;
+	bundle->total_lames = 0;
+}
 /**
  * lame_handle - handles LAME exception and performs context switch
  * 
@@ -414,80 +506,5 @@ __always_inline void lame_handle(void)
 	/* This point is reached when switching back to this thread */
 	log_debug("[LAME][kthread:%d][func:lame_handle] resumed uthread %p",
 		  myk_index(), cur_th);
-}
-
-/**
- * lame_sched_bundle_dismantle - dismantles the bundle and returns all uthreads to runqueue
- * @k: the kthread
- *
- * This function is called when a uthread is descheduled to dismantle the entire bundle.
- * It removes all uthreads from the bundle and adds them back to Caladan's runqueue.
- * This ensures bundle lifecycle is tied to Caladan's scheduling lifecycle.
- *
- * The function does not perform accounting or statistics as those are handled by
- * Caladan's regular descheduling procedure.
- */
-void lame_sched_bundle_dismantle(struct kthread *k)
-{
-	struct lame_bundle *bundle = &k->lame_bundle;
-	unsigned int i;
-	uint64_t now_tsc = rdtsc();
-
-	if (bundle->used <= 0) {
-		/* Reset bundle state */
-		bundle->used = 0;
-		bundle->active = 0;
-		bundle->total_cycles = 0;
-		bundle->total_lames = 0;
-		return;
-	}
-
-	/* Iterate through all bundle slots */
-	spin_lock(&k->lock);
-	for (i = 0; i < bundle->size; i++) {
-		if (bundle->uthreads[i].present) {
-			thread_t *th = bundle->uthreads[i].uthread;
-			uint32_t rq_tail;
-			
-			/* Mark uthread as ready */
-			th->thread_ready = true;
-			th->thread_running = false;
-			th->ready_tsc = now_tsc;
-			
-			/* Add uthread back to runqueue (similar to thread_ready but without accounting) */
-			rq_tail = load_acquire(&k->rq_tail);
-			if (unlikely(k->rq_head - rq_tail >= RUNTIME_RQ_SIZE ||
-			             !list_empty_volatile(&k->rq_overflow))) {
-				/* Runqueue is full, add to overflow list */
-				assert(k->rq_head - rq_tail <= RUNTIME_RQ_SIZE);
-				list_add_tail(&k->rq_overflow, &th->link);
-				drain_overflow(k);
-				ACCESS_ONCE(k->q_ptrs->rq_head)++;
-			} else {
-				/* Add to main runqueue */
-				k->rq[k->rq_head % RUNTIME_RQ_SIZE] = th;
-				store_release(&k->rq_head, k->rq_head + 1);
-				if (k->rq_head - load_acquire(&k->rq_tail) == 1)
-					ACCESS_ONCE(k->q_ptrs->oldest_tsc) = th->ready_tsc;
-				ACCESS_ONCE(k->q_ptrs->rq_head)++;
-			}
-			
-			/* Clear the bundle slot */
-			bundle->uthreads[i].present = false;
-			bundle->uthreads[i].uthread = NULL;
-			bundle->uthreads[i].cycles = 0;
-			bundle->uthreads[i].lame_count = 0;
-			
-			log_debug("[LAME][kthread:%d][func:lame_sched_bundle_dismantle] returned uthread %p to runqueue",
-				 myk_index(), th);
-		}
-	}
-	spin_unlock(&k->lock);
-
-	/* Reset bundle state */
-	bundle->used = 0;
-	bundle->active = 0;
-	bundle->total_cycles = 0;
-	bundle->total_lames = 0;
 }
 /* end */
