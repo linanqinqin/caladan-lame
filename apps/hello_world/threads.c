@@ -17,13 +17,15 @@
 #define MIN_MATRIX_SIZE 128
 #define MAX_MATRIX_SIZE 512
 
+// Global variable for LAME enable flag
+int enable_lame = 0;
+
 // Thread arguments structure
 typedef struct {
     int thread_id;
     int *shared_counter;
     pthread_mutex_t *counter_mutex;
     int matrix_size;  // Each thread gets its own matrix size
-    int enable_lame;  // Whether to enable LAME interrupts
 } thread_args_t;
 
 /* linanqinqin */
@@ -129,7 +131,6 @@ void *worker_thread(void *arg)
 int main(int argc, char *argv[])
 {
     int num_threads;
-    int enable_lame;
     pthread_t *threads;
     thread_args_t *thread_args;
     int shared_counter = 0;
@@ -147,7 +148,7 @@ int main(int argc, char *argv[])
     }
     
     num_threads = atoi(argv[1]);
-    enable_lame = (argc == 3);  // Enable LAME if second argument is present
+    enable_lame = (argc == 3);  // Set global variable if second argument is present
     
     if (num_threads <= 0 || num_threads > NUM_THREADS_MAX) {
         printf("Error: Number of threads must be between 1 and %d\n", NUM_THREADS_MAX);
@@ -192,7 +193,6 @@ int main(int argc, char *argv[])
         /* linanqinqin */
         // Generate random matrix size for this thread
         thread_args[i].matrix_size = MIN_MATRIX_SIZE + (rand() % (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1));
-        thread_args[i].enable_lame = enable_lame;  // Pass LAME enable flag to thread
         printf("Thread %d will use matrix size: %dx%d\n", i, thread_args[i].matrix_size, thread_args[i].matrix_size);
         /* end */
         
