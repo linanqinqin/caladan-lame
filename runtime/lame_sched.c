@@ -67,7 +67,7 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th, bool set_active)
 	unsigned int i;
 	int first_empty_slot = -1;
 
-	log_info("[LAME][kthread:%d][func:lame_bundle_add_uthread] adding uthread %p (set_active=%d)",
+	log_debug("[LAME][kthread:%d][func:lame_bundle_add_uthread] adding uthread %p (set_active=%d)",
 			myk_index(), th, set_active);
 
 	/* Iterate through the bundle to check for duplicates and find first empty slot */
@@ -104,7 +104,7 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th, bool set_active)
 	/* If this is the uthread that will run next, update the active index */
 	if (set_active) {
 		bundle->active = first_empty_slot;
-		log_info("[LAME][kthread:%d][func:lame_bundle_add_uthread] set active index to %d for uthread %p",
+		log_debug("[LAME][kthread:%d][func:lame_bundle_add_uthread] set active index to %d for uthread %p",
 				myk_index(), first_empty_slot, th);
 	}
 	
@@ -123,7 +123,7 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
 
-	log_info("[LAME][kthread:%d][func:lame_bundle_remove_uthread] removing uthread %p",
+	log_debug("[LAME][kthread:%d][func:lame_bundle_remove_uthread] removing uthread %p",
 			myk_index(), th);
 
 	/* Find the uthread in the bundle */
@@ -173,8 +173,8 @@ __always_inline thread_t *lame_sched_get_next_uthread(struct kthread *k)
 			bundle->total_lames++;
 			bundle->uthreads[idx].lame_count++;
 			
-			log_debug("LAME switch: uthread %p selected from bundle slot %d (kthread %d)",
-				 bundle->uthreads[idx].uthread, idx, myk_index());
+			log_debug("[LAME][kthread:%d][func:lame_sched_get_next_uthread] uthread %p selected from bundle slot %d",
+				 myk_index(), bundle->uthreads[idx].uthread, idx);
 			return bundle->uthreads[idx].uthread;
 		}
 	}
@@ -227,7 +227,7 @@ __always_inline void lame_sched_enable(struct kthread *k)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	
 	bundle->enabled = true;
-	log_debug("enabled LAME bundle scheduling for kthread %d",
+	log_debug("[LAME][kthread:%d][func:lame_sched_enable] enabled LAME bundle scheduling",
 			myk_index());
 }
 
@@ -244,7 +244,7 @@ __always_inline void lame_sched_disable(struct kthread *k)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	
 	bundle->enabled = false;
-	log_debug("disabled LAME bundle scheduling for kthread %d",
+	log_debug("[LAME][kthread:%d][func:lame_sched_disable] disabled LAME bundle scheduling",
 		myk_index());
 }
 
@@ -327,8 +327,8 @@ void lame_bundle_set_ready_false_all(struct kthread *k)
 		}
 	}
 
-	log_debug("[LAME][kthread:%d] Set thread_ready=false for all %u uthreads in bundle",
-		 myk_index(), bundle->used);
+	log_debug("[LAME][kthread:%d][func:lame_bundle_set_ready_false_all]",
+		 myk_index());
 }
 
 /**
@@ -350,8 +350,8 @@ void lame_bundle_set_running_true_all(struct kthread *k)
 		}
 	}
 
-	log_debug("[LAME][kthread:%d] Set thread_running=true for all %u uthreads in bundle",
-		 myk_index(), bundle->used);
+	log_debug("[LAME][kthread:%d][func:lame_bundle_set_running_true_all]",
+		 myk_index());
 }
 
 /**
@@ -372,7 +372,7 @@ __always_inline void lame_handle(void)
 
 	/* Check if LAME scheduling is enabled */
 	if (!lame_sched_is_dynamically_enabled(k)) {
-		log_info("[LAME][kthread:%d][func:lame_handle] scheduling disabled",
+		log_warn("[LAME][kthread:%d][func:lame_handle] scheduling disabled",
 			myk_index());
 		preempt_enable();
 		return;
@@ -381,7 +381,7 @@ __always_inline void lame_handle(void)
 	/* Get current uthread's trapframe */
 	cur_th = lame_sched_get_current_uthread(k);
 	if (!cur_th) {
-		log_info("[LAME][kthread:%d][func:lame_handle] no current uthread",
+		log_err("[LAME][kthread:%d][func:lame_handle] no current uthread",
 			myk_index());
 		preempt_enable();
 		return;
@@ -390,13 +390,13 @@ __always_inline void lame_handle(void)
 	/* Get next uthread from bundle */
 	next_th = lame_sched_get_next_uthread(k);
 	if (!next_th) {
-		log_info("[LAME][kthread:%d][func:lame_handle] no next uthread available",
+		log_err("[LAME][kthread:%d][func:lame_handle] no next uthread available",
 			myk_index());
 		preempt_enable();
 		return;
 	}
 
-	log_info("[LAME][kthread:%d][func:lame_handle] switching from uthread %p to %p",
+	log_debug("[LAME][kthread:%d][func:lame_handle] switching from uthread %p to %p",
 		  myk_index(), cur_th, next_th);
 
 	/* Update __self to point to the new uthread */
@@ -406,7 +406,7 @@ __always_inline void lame_handle(void)
 	__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
 
 	/* This point is reached when switching back to this thread */
-	log_info("[LAME][kthread:%d][func:lame_handle] resumed uthread %p",
+	log_debug("[LAME][kthread:%d][func:lame_handle] resumed uthread %p",
 		  myk_index(), cur_th);
 }
 
@@ -472,7 +472,7 @@ void lame_sched_bundle_dismantle(struct kthread *k)
 			bundle->uthreads[i].cycles = 0;
 			bundle->uthreads[i].lame_count = 0;
 			
-			log_info("[LAME][kthread:%d][func:lame_sched_bundle_dismantle] returned uthread %p to runqueue",
+			log_debug("[LAME][kthread:%d][func:lame_sched_bundle_dismantle] returned uthread %p to runqueue",
 				 myk_index(), th);
 		}
 	}

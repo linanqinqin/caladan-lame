@@ -80,8 +80,8 @@ static __noreturn void jmp_thread(thread_t *th)
 
 	/* linanqinqin */
 	/* LAME: Log when uthread is started (scheduled on kthread) */
-	// log_info("[LAME][uthread:%p][kthread:%d][sched:ON][func:jmp_thread]", 
-	// 	  th, myk_index());
+	log_info("[LAME][kthread:%d][uthread:%p][func:jmp_thread]", 
+		  myk_index(), th);
 	/* end */
 
 	perthread_store(__self, th);
@@ -118,8 +118,8 @@ static void jmp_thread_direct(thread_t *oldth, thread_t *newth)
 
 	/* linanqinqin */
 	/* LAME: Log when uthread is switched directly (oldth descheduled, newth scheduled) */
-	// log_info("[LAME][uthread:%p][kthread:%d][sched:ON][func:jmp_thread_direct]", 
-	// 	  newth, myk_index());
+	log_info("[LAME][kthread:%d][uthread:%p][func:jmp_thread_direct]", 
+			myk_index(), newth);
 	/* end */	
 
 	perthread_store(__self, newth);
@@ -361,8 +361,8 @@ static __noreturn __noinline void schedule(void)
 	if (likely(perthread_get_stable(__self) != NULL)) {
 		/* linanqinqin */
 		/* LAME: Log when uthread is descheduled from kthread */
-		log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:schedule]",
-					perthread_get_stable(__self), myk_index());
+		log_info("[LAME][kthread:%d][uthread:%p][sched:OFF][func:schedule]",
+					myk_index(), perthread_get_stable(__self));
 		/* this remove could be duplicate, but it catches the case where schedule is called directly */
 		lame_bundle_remove_uthread(l, perthread_get_stable(__self));
 		lame_sched_bundle_dismantle(l);
@@ -507,9 +507,6 @@ done:
 		/* add the next uthread to the bundle */
 		BUG_ON(lame_bundle_add_uthread(l, bundle_th, false) != 0); 	
 		bundle_tmp[bundle_th_added++] = bundle_th;
-		/* log the addition of the uthread to the bundle */
-		// log_info("[LAME][kthread:%d][func:schedule] Added uthread %p to bundle",
-		// 		myk_index(), bundle_th);
 	}
 	lame_bundle_print(l); // print the lame bundle
 	/* end */
@@ -568,8 +565,8 @@ static __always_inline void enter_schedule(thread_t *curth)
 	 * */
 	lame_sched_disable(k); // disable lame scheduling
 	/* LAME: Log when uthread enters scheduler (descheduled from kthread) */
-	log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:enter_schedule]", 
-		  curth, myk_index());
+	log_info("[LAME][kthread:%d][uthread:%p][func:enter_schedule]", 
+		  myk_index(), curth);
 	lame_bundle_remove_uthread(k, curth); // remove the current uthread from the lame bundle
 	lame_sched_bundle_dismantle(k); // dismantle the lame bundle (if there is still uthreads)
 	lame_bundle_print(k); // print the lame bundle
@@ -619,10 +616,6 @@ static __always_inline void enter_schedule(thread_t *curth)
 
 		/* update run_start_tsc here; this is not the cleanest way but should work */
 		bundle_th->run_start_tsc = perthread_get_stable(last_tsc);
-
-		/* log the addition of the uthread to the bundle */
-		// log_info("[LAME][kthread:%d][func:enter_schedule] Added uthread %p to bundle",
-		// 		myk_index(), bundle_th);
 	}
 	lame_bundle_print(k); // print the lame bundle
 	/* end */
@@ -843,8 +836,8 @@ static void thread_finish_cede(void)
 
 	/* linanqinqin */
 	/* LAME: Log when uthread cedes (descheduled from kthread) */
-	// log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:thread_finish_cede]", 
-	// 	  myth, myk_index());
+	log_info("[LAME][kthread:%d][uthread:%p][func:thread_finish_cede]", 
+			myk_index(), myth);
 	/* end */
 
 	/* update stats and scheduler state */
@@ -1027,7 +1020,9 @@ static void thread_finish_exit(void)
 	struct thread *th = thread_self();
 
 	/* linanqinqin */
-	// log_info("[LAME][uthread:%p][kthread:%d][sched:OFF][func:thread_finish_exit]", th, myk_index()); // log when uthread exits
+	log_info("[LAME][kthread:%d][uthread:%p][func:thread_finish_exit]", 
+			myk_index(), th);
+	
 	lame_sched_disable(myk()); 				// disable lame scheduling
 	lame_bundle_remove_uthread(myk(), th); 	// remove the uthread from the lame bundle
 	lame_bundle_print(myk()); // print the lame bundle
