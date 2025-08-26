@@ -378,6 +378,12 @@ __always_inline void lame_handle(void)
 		return;
 	}
 
+	/* If there is only one uthread in the bundle, no need to schedule */
+	if (lame_bundle_get_used_count(k) <= 1) {
+		preempt_enable();
+		return;
+	}
+
 	/* Get current uthread's trapframe */
 	cur_th = lame_sched_get_current_uthread(k);
 	if (!cur_th) {
