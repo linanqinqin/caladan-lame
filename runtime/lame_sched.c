@@ -420,10 +420,10 @@ void lame_sched_bundle_dismantle(struct kthread *k)
 	}
 
 	/* Reset bundle state */
-	bundle->used = 0;
-	bundle->active = 0;
-	bundle->total_cycles = 0;
-	bundle->total_lames = 0;
+	k->lame_bundle.used = 0;
+	k->lame_bundle.active = 0;
+	k->lame_bundle.total_cycles = 0;
+	k->lame_bundle.total_lames = 0;
 }
 
 /**
@@ -441,10 +441,10 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
 	}
 
 	/* Reset bundle state */
-	bundle->used = 0;
-	bundle->active = 0;
-	bundle->total_cycles = 0;
-	bundle->total_lames = 0;
+	k->lame_bundle.used = 0;
+	k->lame_bundle.active = 0;
+	k->lame_bundle.total_cycles = 0;
+	k->lame_bundle.total_lames = 0;
 }
 /**
  * lame_handle - handles LAME exception and performs context switch
