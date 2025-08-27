@@ -150,7 +150,6 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 int lame_bundle_remove_uthread_by_index(struct kthread *k, unsigned int index)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
-	unsigned int i;
 
 	log_debug("[LAME][kthread:%d][func:lame_bundle_remove_uthread_by_index] removing uthread at index %u",
 			myk_index(), index);
@@ -478,6 +477,35 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
 	k->lame_bundle.total_cycles = 0;
 	k->lame_bundle.total_lames = 0;
 }
+
+// void lame_sched_bundle_dismantle(struct kthread *k)
+// {
+// 	struct lame_bundle *bundle = &k->lame_bundle;
+
+// 	if (bundle->used > 0) {
+// 		if (bundle->active == 0) {
+// 			/* scheduling re-entered with the original uthread picked by Caladan */
+// 			lame_bundle_remove_uthread_by_index(k, 0);
+// 			spin_lock(&k->lock);
+// 			__lame_bundle_to_rq(k);
+// 			spin_unlock(&k->lock);
+// 		}
+// 		else {
+// 			/* scheduling re-entered with the uthread picked by LAME */
+// 			lame_bundle_remove_uthread_by_index(k, 0);
+// 			spin_lock(&k->lock);
+// 			__lame_bundle_to_rq(k);
+// 			spin_unlock(&k->lock);
+// 		}
+// 	}
+	
+// 	/* Reset bundle state */
+// 	bundle->used = 0;
+// 	bundle->active = 0;
+// 	bundle->total_cycles = 0;
+// 	bundle->total_lames = 0;
+// }
+
 /**
  * lame_handle - handles LAME exception and performs context switch
  * 
