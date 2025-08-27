@@ -141,6 +141,38 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 }
 
 /**
+ * lame_bundle_remove_uthread_by_index - removes a uthread from the bundle by index
+ * @k: the kthread
+ * @index: the index of the uthread to remove
+ *
+ * Returns 0 if successful, or -EINVAL if index is out of bounds, or -ENOENT if uthread not present.
+ */
+int lame_bundle_remove_uthread_by_index(struct kthread *k, unsigned int index)
+{
+	struct lame_bundle *bundle = &k->lame_bundle;
+	unsigned int i;
+
+	log_debug("[LAME][kthread:%d][func:lame_bundle_remove_uthread_by_index] removing uthread at index %u",
+			myk_index(), index);
+
+	if (index >= bundle->size) {
+		log_err("[LAME][kthread:%d][func:lame_bundle_remove_uthread_by_index] index %u out of bounds",
+			myk_index(), index);
+		return -EINVAL;
+	}
+
+	if (bundle->uthreads[index].present) {
+		bundle->uthreads[index].present = false;
+		bundle->uthreads[index].uthread = NULL;
+		bundle->used--;
+		return 0;
+	}
+	else {
+		return -ENOENT;
+	}
+}
+
+/**
  * lame_bundle_get_used_count - gets the number of uthreads currently in the bundle
  * @k: the kthread
  *

@@ -364,7 +364,7 @@ static __noreturn __noinline void schedule(void)
 		log_info("[LAME][kthread:%d][uthread:%p][func:schedule]",
 					myk_index(), perthread_get_stable(__self));
 		/* this remove could be duplicate, but it catches the case where schedule is called directly */
-		lame_bundle_remove_uthread(l, perthread_get_stable(__self));
+		lame_bundle_remove_uthread_by_index(l, 0);
 		/* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
 		perthread_get_stable(__self) = NULL;
@@ -574,7 +574,7 @@ static __always_inline void enter_schedule(thread_t *curth)
 	/* LAME: Log when uthread enters scheduler (descheduled from kthread) */
 	log_info("[LAME][kthread:%d][uthread:%p][func:enter_schedule]", 
 		  myk_index(), curth);
-	lame_bundle_remove_uthread(k, curth); // remove the current uthread from the lame bundle
+	lame_bundle_remove_uthread_by_index(k, 0); // remove the uthread at index 0 from the lame bundle
 	lame_sched_bundle_dismantle(k); // dismantle the lame bundle (if there is still uthreads)
 	lame_bundle_print(k); // print the lame bundle
 	/* end */
