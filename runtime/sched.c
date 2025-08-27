@@ -361,10 +361,10 @@ static __noreturn __noinline void schedule(void)
 	if (likely(perthread_get_stable(__self) != NULL)) {
 		/* linanqinqin */
 		/* LAME: Log when uthread is descheduled from kthread */
-		log_info("[LAME][kthread:%d][uthread:%p][func:schedule]",
-					myk_index(), perthread_get_stable(__self));
-		/* this remove could be duplicate, but it catches the case where schedule is called directly */
-		lame_bundle_remove_uthread_by_index(l, 0);
+		// log_info("[LAME][kthread:%d][uthread:%p][func:schedule]",
+		// 			myk_index(), perthread_get_stable(__self));
+		// /* this remove could be duplicate, but it catches the case where schedule is called directly */
+		// lame_bundle_remove_uthread_by_index(l, 0);
 		/* end */
 		store_release(&perthread_get_stable(__self)->thread_running, false);
 		perthread_get_stable(__self) = NULL;
@@ -381,7 +381,8 @@ static __noreturn __noinline void schedule(void)
 	 * this remove could be duplicate, but it catches the case where schedule 
 	 * is called directly, e.g, thread_finish_exit 
 	 */
-	lame_sched_bundle_dismantle_nolock(l);
+	lame_bundle_remove_uthread_by_index(l, 0);
+	lame_sched_bundle_dismantle(l);
 	lame_bundle_print(l);
 	/* end */
 
@@ -562,7 +563,7 @@ static __always_inline void enter_schedule(thread_t *curth)
 	/* linanqinqin */
 	/* 
 	 * dismantle the lame bundle - two-step process:
-	 * 1. remove the current uthread from the lame bundle
+	 * 1. remove the original uthread picked by Caladan (index 0) from the lame bundle
 	 * 2. remove the remaining uthreads (if any)
 	 *
 	 * The reason for this is that the current uthread should be handled by Caladan's 
