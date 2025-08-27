@@ -383,7 +383,7 @@ static __noreturn __noinline void schedule(void)
 	 */
 	log_info("[LAME][kthread:%d][func:schedule]", myk_index());
 	lame_bundle_print(l);
-	lame_bundle_remove_uthread_by_index(l, 0);
+	// lame_bundle_remove_uthread_by_index(l, 0);
 	lame_sched_bundle_dismantle_nolock(l);
 	lame_bundle_print(l);
 	/* end */
@@ -565,7 +565,7 @@ static __always_inline void enter_schedule(thread_t *curth)
 	/* linanqinqin */
 	/* 
 	 * dismantle the lame bundle - two-step process:
-	 * 1. remove the original uthread picked by Caladan (index 0) from the lame bundle
+	 * 1. remove the current uthread from the lame bundle
 	 * 2. remove the remaining uthreads (if any)
 	 *
 	 * The reason for this is that the current uthread should be handled by Caladan's 
@@ -578,7 +578,7 @@ static __always_inline void enter_schedule(thread_t *curth)
 	log_info("[LAME][kthread:%d][uthread:%p][func:enter_schedule]", 
 		  myk_index(), curth);
 	lame_bundle_print(k);
-	lame_bundle_remove_uthread_by_index(k, 0); // remove the uthread at index 0 from the lame bundle
+	lame_bundle_remove_uthread_by_index(k, curth); // remove the current uthread from the lame bundle
 	lame_sched_bundle_dismantle(k); // dismantle the lame bundle (if there is still uthreads)
 	lame_bundle_print(k); // print the lame bundle
 	/* end */
