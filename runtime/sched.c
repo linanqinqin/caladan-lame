@@ -383,8 +383,8 @@ static __noreturn __noinline void schedule(void)
 	 */
 	log_info("[LAME][kthread:%d][func:schedule]", myk_index());
 	lame_bundle_print(l);
-	// lame_bundle_remove_uthread_by_index(l, 0);
-	lame_sched_bundle_dismantle(l);
+	lame_bundle_remove_uthread_by_index(l, 0);
+	lame_sched_bundle_dismantle_nolock(l);
 	lame_bundle_print(l);
 	/* end */
 
