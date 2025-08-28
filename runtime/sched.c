@@ -655,6 +655,8 @@ static __always_inline void enter_schedule(thread_t *curth)
 		th->thread_ready = false;
 		preempt_enable();
 		/* linanqinqin*/
+		lame_bundle_set_ready_false_all(k);
+		lame_bundle_set_running_true_all(k);
 		lame_sched_enable(k);
 		/* end */
 		return;
