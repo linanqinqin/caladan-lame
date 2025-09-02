@@ -123,12 +123,13 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
 
-	log_debug("[LAME][kthread:%d][func:lame_bundle_remove_uthread] removing uthread %p",
-			myk_index(), th);
-
 	/* Find the uthread in the bundle */
 	for (i = 0; i < bundle->size; i++) {
 		if (bundle->uthreads[i].present && bundle->uthreads[i].uthread == th) {
+	
+			log_debug("[LAME][kthread:%d][uthread:%p][func:lame_bundle_remove_uthread] removing uthread at index %u",
+					myk_index(), th, i);
+
 			bundle->uthreads[i].present = false;
 			bundle->uthreads[i].uthread = NULL;
 			bundle->used--;
@@ -137,6 +138,8 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 		}
 	}
 
+	log_debug("[LAME][kthread:%d][uthread:%p][func:lame_bundle_remove_uthread] uthread not found",
+			myk_index(), th);
 	return -ENOENT;
 }
 
@@ -167,6 +170,34 @@ int lame_bundle_remove_uthread_by_index(struct kthread *k, unsigned int index)
 		return 0;
 	}
 	else {
+		return -ENOENT;
+	}
+}
+
+/**
+ * lame_bundle_remove_uthread_at_active - removes the uthread at the active index
+ * @k: the kthread
+ *
+ * Returns 0 if successful, or -ENOENT if uthread not present.
+ */
+int lame_bundle_remove_uthread_at_active(struct kthread *k)
+{
+	struct lame_bundle *bundle = &k->lame_bundle;
+	unsigned int active = bundle->active;
+	
+	if (bundle->uthreads[active].present) {
+	
+		log_debug("[LAME][kthread:%d][uthread:%p][func:lame_bundle_remove_uthread_at_active] removing uthread at active index %u",
+			myk_index(), bundle->uthreads[active].uthread, active);
+
+		bundle->uthreads[active].present = false;
+		bundle->uthreads[active].uthread = NULL;
+		bundle->used--;
+		return 0;
+	}
+	else {
+		log_debug("[LAME][kthread:%d][func:lame_bundle_remove_uthread_at_active] uthread at active index %u not present",
+			myk_index(), active);
 		return -ENOENT;
 	}
 }

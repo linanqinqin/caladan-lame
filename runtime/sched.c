@@ -578,7 +578,7 @@ static __always_inline void enter_schedule(thread_t *curth)
 	log_info("[LAME][kthread:%d][uthread:%p][func:enter_schedule]", 
 		  myk_index(), curth);
 	lame_bundle_print(k);
-	lame_bundle_remove_uthread(k, curth); // remove the current uthread from the lame bundle
+	lame_bundle_remove_uthread_at_active(k); // remove the current activeuthread from the lame bundle
 	lame_sched_bundle_dismantle(k); // dismantle the lame bundle (if there is still uthreads)
 	lame_bundle_print(k); // print the lame bundle
 	/* end */
