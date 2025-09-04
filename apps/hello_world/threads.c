@@ -28,7 +28,6 @@ typedef struct {
     int matrix_size;  // Each thread gets its own matrix size
 } thread_args_t;
 
-/* linanqinqin */
 // Function to generate a deterministic matrix A based on i,j indices
 void generate_matrix_A(int *matrix, int size) {
     for (int i = 0; i < size; i++) {
@@ -72,7 +71,6 @@ long long verify_matrix_multiply(int *A, int *B, int *C, int size) {
     }
     return sum;
 }
-/* end */
 
 // Thread function
 void *worker_thread(void *arg)
@@ -83,7 +81,6 @@ void *worker_thread(void *arg)
     
     printf("Hello from worker thread %d!\n", thread_id);
     
-    /* linanqinqin */
     // Perform matrix multiplication computation
     int *A = malloc(matrix_size * matrix_size * sizeof(int));
     int *B = malloc(matrix_size * matrix_size * sizeof(int));
@@ -115,7 +112,6 @@ void *worker_thread(void *arg)
     free(A);
     free(B);
     free(C);
-    /* end */
     
     // Update shared counter with proper synchronization
     pthread_mutex_lock(args->counter_mutex);
@@ -136,14 +132,15 @@ int main(int argc, char *argv[])
     int shared_counter = 0;
     pthread_mutex_t counter_mutex;
     int i, ret;
+    int thread_counter = 0;  // Global thread counter for unique IDs
     
-    /* linanqinqin */
     // Check command line arguments
     if (argc < 2 || argc > 3) {
         printf("Usage: %s <number_of_threads> [enable_lame]\n", argv[0]);
         printf("Example: %s 4\n", argv[0]);
         printf("Example: %s 4 1\n", argv[0]);
         printf("  Second argument (any value) enables LAME interrupts\n");
+        printf("  Program runs continuously, spawning new threads as old ones finish\n");
         return 1;
     }
     
@@ -157,14 +154,13 @@ int main(int argc, char *argv[])
     
     // Seed random number generator for matrix sizes
     srand(time(NULL));
-    /* end */
     
     printf("Hello, World from Caladan with POSIX threading!\n");
     printf("Spawning %d worker threads with random matrix sizes (%d-%d)...\n", 
            num_threads, MIN_MATRIX_SIZE, MAX_MATRIX_SIZE);
     printf("LAME interrupts: %s\n", enable_lame ? "ENABLED" : "DISABLED");
+    printf("Running continuously - press Ctrl+C to stop\n");
     
-    /* linanqinqin */
     // Allocate arrays for threads and arguments
     threads = malloc(num_threads * sizeof(pthread_t));
     thread_args = malloc(num_threads * sizeof(thread_args_t));
@@ -175,7 +171,6 @@ int main(int argc, char *argv[])
         free(thread_args);
         return 1;
     }
-    /* end */
     
     // Initialize mutex
     if (pthread_mutex_init(&counter_mutex, NULL) != 0) {
@@ -185,43 +180,48 @@ int main(int argc, char *argv[])
         return 1;
     }
     
-    // Create threads
+    // Initialize all thread slots as unused
     for (i = 0; i < num_threads; i++) {
-        thread_args[i].thread_id = i;
-        thread_args[i].shared_counter = &shared_counter;
-        thread_args[i].counter_mutex = &counter_mutex;
-        /* linanqinqin */
-        // Generate random matrix size for this thread
-        thread_args[i].matrix_size = MIN_MATRIX_SIZE + (rand() % (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1));
-        printf("Thread %d will use matrix size: %dx%d\n", i, thread_args[i].matrix_size, thread_args[i].matrix_size);
-        /* end */
+        threads[i] = 0;  // Mark as unused
+    }
+    
+    // Main continuous loop
+    while (1) {
+        // Check for finished threads and spawn new ones
+        for (i = 0; i < num_threads; i++) {
+            if (threads[i] != 0) {
+                // Check if thread has finished
+                ret = pthread_tryjoin_np(threads[i], NULL);
+                if (ret == 0) {
+                    // Thread finished, mark slot as available
+                    threads[i] = 0;
+                    printf("Thread slot %d freed, spawning new thread...\n", i);
+                }
+            }
+            
+            // If slot is available, spawn new thread
+            if (threads[i] == 0) {
+                thread_args[i].thread_id = thread_counter++;
+                thread_args[i].shared_counter = &shared_counter;
+                thread_args[i].counter_mutex = &counter_mutex;
+                // Generate random matrix size for this thread
+                thread_args[i].matrix_size = MIN_MATRIX_SIZE + (rand() % (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1));
+                printf("Spawning thread %d with matrix size: %dx%d\n", 
+                       thread_args[i].thread_id, thread_args[i].matrix_size, thread_args[i].matrix_size);
+                
+                ret = pthread_create(&threads[i], NULL, worker_thread, &thread_args[i]);
+                if (ret != 0) {
+                    printf("Failed to create thread %d\n", thread_args[i].thread_id);
+                    threads[i] = 0;  // Mark as failed
+                }
+            }
+        }
         
-        ret = pthread_create(&threads[i], NULL, worker_thread, &thread_args[i]);
-        if (ret != 0) {
-            printf("Failed to create thread %d\n", i);
-            pthread_mutex_destroy(&counter_mutex);
-            free(threads);
-            free(thread_args);
-            return 1;
-        }
+        // Small sleep to prevent busy waiting
+        usleep(1000);  // 1ms
     }
     
-    // Wait for all threads to complete
-    for (i = 0; i < num_threads; i++) {
-        ret = pthread_join(threads[i], NULL);
-        if (ret != 0) {
-            printf("Failed to join thread %d\n", i);
-            pthread_mutex_destroy(&counter_mutex);
-            free(threads);
-            free(thread_args);
-            return 1;
-        }
-    }
-    
-    printf("All %d threads completed successfully!\n", num_threads);
-    printf("Final counter value: %d\n", shared_counter);
-    
-    // Clean up
+    // Clean up (this will never be reached due to infinite loop)
     pthread_mutex_destroy(&counter_mutex);
     free(threads);
     free(thread_args);
