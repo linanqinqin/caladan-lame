@@ -555,7 +555,8 @@ __always_inline void lame_handle(void)
 
 	/* Check if LAME scheduling is enabled */
 	if (!lame_sched_is_dynamically_enabled(k)) {
-		log_warn("[LAME][kthread:%d][func:lame_handle] scheduling disabled",
+		/* this should not happen */
+		log_err("[LAME][kthread:%d][func:lame_handle] scheduling disabled",
 			myk_index());
 		preempt_enable();
 		return;
