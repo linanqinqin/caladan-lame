@@ -127,7 +127,6 @@ void *worker_thread(void *arg)
 int main(int argc, char *argv[])
 {
     int num_threads;
-    pthread_t *threads;
     thread_args_t *thread_args;
     int shared_counter = 0;
     pthread_mutex_t counter_mutex;
@@ -161,69 +160,58 @@ int main(int argc, char *argv[])
     printf("LAME interrupts: %s\n", enable_lame ? "ENABLED" : "DISABLED");
     printf("Running continuously - press Ctrl+C to stop\n");
     
-    // Allocate arrays for threads and arguments
-    threads = malloc(num_threads * sizeof(pthread_t));
+    // Allocate array for thread arguments
     thread_args = malloc(num_threads * sizeof(thread_args_t));
     
-    if (!threads || !thread_args) {
-        printf("Failed to allocate memory for threads\n");
-        free(threads);
-        free(thread_args);
+    if (!thread_args) {
+        printf("Failed to allocate memory for thread arguments\n");
         return 1;
     }
     
     // Initialize mutex
     if (pthread_mutex_init(&counter_mutex, NULL) != 0) {
         printf("Failed to initialize mutex\n");
-        free(threads);
         free(thread_args);
         return 1;
     }
     
-    // Initialize all thread slots as unused
-    for (i = 0; i < num_threads; i++) {
-        threads[i] = 0;  // Mark as unused
-    }
     
     // Main continuous loop
     while (1) {
-        // Check for finished threads and spawn new ones
-        for (i = 0; i < num_threads; i++) {
-            if (threads[i] != 0) {
-                // Check if thread has finished
-                ret = pthread_tryjoin_np(threads[i], NULL);
-                if (ret == 0) {
-                    // Thread finished, mark slot as available
-                    threads[i] = 0;
-                    printf("Thread slot %d freed, spawning new thread...\n", i);
-                }
-            }
+        // Calculate how many threads are currently running
+        int threads_running = thread_counter - shared_counter;
+        int threads_to_spawn = num_threads - threads_running;
+        
+        printf("Threads spawned: %d, completed: %d, running: %d, need to spawn: %d\n", 
+               thread_counter, shared_counter, threads_running, threads_to_spawn);
+        
+        // Spawn only the number of threads needed to maintain num_threads active
+        for (i = 0; i < threads_to_spawn; i++) {
+            pthread_t temp_thread;
+            thread_args[i].thread_id = thread_counter++;
+            thread_args[i].shared_counter = &shared_counter;
+            thread_args[i].counter_mutex = &counter_mutex;
             
-            // If slot is available, spawn new thread
-            if (threads[i] == 0) {
-                thread_args[i].thread_id = thread_counter++;
-                thread_args[i].shared_counter = &shared_counter;
-                thread_args[i].counter_mutex = &counter_mutex;
-                // Generate random matrix size for this thread
-                thread_args[i].matrix_size = MIN_MATRIX_SIZE + (rand() % (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1));
-                printf("Spawning thread %d with matrix size: %dx%d\n", 
-                       thread_args[i].thread_id, thread_args[i].matrix_size, thread_args[i].matrix_size);
-                
-                ret = pthread_create(&threads[i], NULL, worker_thread, &thread_args[i]);
-                if (ret != 0) {
-                    printf("Failed to create thread %d\n", thread_args[i].thread_id);
-                    threads[i] = 0;  // Mark as failed
-                }
+            // Generate random matrix size for this thread
+            thread_args[i].matrix_size = MIN_MATRIX_SIZE + (rand() % (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1));
+            printf("Spawning thread %d with matrix size: %dx%d\n", 
+                   thread_args[i].thread_id, thread_args[i].matrix_size, thread_args[i].matrix_size);
+            
+            ret = pthread_create(&temp_thread, NULL, worker_thread, &thread_args[i]);
+            if (ret != 0) {
+                printf("Failed to create thread %d\n", thread_args[i].thread_id);
+            } else {
+                // Detach the thread so it cleans up automatically when done
+                pthread_detach(temp_thread);
             }
         }
         
-        // Small sleep to prevent busy waiting
+        // Sleep to let threads run and complete
         usleep(1000);  // 1ms
     }
     
     // Clean up (this will never be reached due to infinite loop)
     pthread_mutex_destroy(&counter_mutex);
-    free(threads);
     free(thread_args);
     
     return 0;
