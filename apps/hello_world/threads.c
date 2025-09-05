@@ -182,8 +182,10 @@ int main(int argc, char *argv[])
         int threads_running = thread_counter - shared_counter;
         int threads_to_spawn = num_threads - threads_running;
         
-        printf("Threads spawned: %d, completed: %d, running: %d, need to spawn: %d\n", 
-               thread_counter, shared_counter, threads_running, threads_to_spawn);
+        if (threads_to_spawn > 0) {
+            printf("Threads spawned: %d, completed: %d, running: %d, need to spawn: %d\n", 
+                   thread_counter, shared_counter, threads_running, threads_to_spawn);
+        }
         
         // Spawn only the number of threads needed to maintain num_threads active
         for (i = 0; i < threads_to_spawn; i++) {
