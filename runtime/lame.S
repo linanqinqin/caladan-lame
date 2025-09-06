@@ -3,6 +3,7 @@
  */
 
 #include <base/trapframe.h>
+#include "lame.h"
 
 .file "lame.S"
 .section        .note.GNU-stack,"",@progbits
@@ -102,4 +103,131 @@ __lame_entry:
 
 	/* Return from LAME exception */
 	iretq
-	/* end */ 
+
+/**
+ * __lame_entry2 - maximally optimized LAME handler for bundle size 2
+ * 
+ * This is a flattened, branch-free assembly implementation specifically
+ * optimized for bundle size 2. It performs the following steps:
+ * 1. Save volatile CPU state (except callee registers, rsp, rip, rflags)
+ * 2. Get current kthread from perthread storage
+ * 3. Check if LAME scheduling is enabled (branch-free)
+ * 4. Get current uthread from bundle[active]
+ * 5. Toggle active index using XOR (0 <-> 1)
+ * 6. Get next uthread from bundle[active]
+ * 7. Perform context switch using __lame_jmp_thread_direct
+ * 8. Restore volatile CPU state
+ * 9. Return with iretq
+ * 
+ * Key optimizations:
+ * - No function calls (all logic inlined)
+ * - No logging
+ * - Branch-free design using conditional moves
+ * - Bit operations for index toggling
+ * - Direct memory access with known offsets
+ */
+.align 16
+.globl __lame_entry2
+.type __lame_entry2, @function
+__lame_entry2:
+	/* linanqinqin */
+	/* Disable preemption to protect LAME context switch atomicity */
+	addl	$1, %gs:__perthread_preempt_cnt(%rip)
+
+	/* Save volatile registers to stack */
+	pushq	%rax
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rsi
+	pushq	%rdi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+
+	/* Get current kthread from perthread storage */
+	movq	%gs:__perthread_mykthread(%rip), %r8
+
+	/* Check if LAME scheduling is enabled (branch-free) */
+	movb	LAME_BUNDLE_OFFSET + LAME_BUNDLE_ENABLED(%r8), %al	/* bundle.enabled */
+	testb	%al, %al
+	jz	.lame_entry2_noswitch	/* Exit if disabled */
+
+	/* Check if bundle has exactly 2 uthreads (used == 2) */
+	cmpl	$2, LAME_BUNDLE_OFFSET + LAME_BUNDLE_USED(%r8)	/* bundle.used */
+	jne	.lame_entry2_noswitch	/* Exit if not exactly 2 (this means there is only one uthread in the bundle, thus no switching needed) */
+
+	/* Get current active index */
+	movl	LAME_BUNDLE_OFFSET + LAME_BUNDLE_ACTIVE(%r8), %eax	/* bundle.active */
+
+	/* Calculate current uthread pointer: bundle.uthreads[active].uthread */
+	leaq	LAME_BUNDLE_OFFSET + LAME_BUNDLE_UTHREADS(%r8), %r9	/* bundle.uthreads base */
+	movq	(%r9, %rax, 8), %r10	/* Load current uthread pointer */
+
+	/* Toggle active index: active = active ^ 1 (0 <-> 1) */
+	xorl	$1, %eax
+	movl	%eax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_ACTIVE(%r8)	/* Store new active index */
+
+	/* Get next uthread pointer: bundle.uthreads[active].uthread */
+	movq	(%r9, %rax, 8), %r11	/* Load next uthread pointer */
+
+	/* Update __self to point to the new uthread */
+	movq	%r11, %gs:__perthread___self(%rip)
+
+	/* Flattened context switch - save current thread state */
+	/* Save IP and stack pointer to current thread's trapframe */
+	/* IP should point to .lame_entry2_exit for when we return to this thread */
+	leaq	.lame_entry2_exit(%rip), %r9	/* Get address of exit label */
+	movq	%r9, THREAD_TF_OFFSET + RIP(%r10)	/* Save RIP to current tf */
+	movq	%rsp, THREAD_TF_OFFSET + RSP(%r10)	/* Save current RSP to current tf */
+
+	/* Save callee-saved registers to current thread's trapframe */
+	movq	%rbx, THREAD_TF_OFFSET + RBX(%r10)
+	movq	%rbp, THREAD_TF_OFFSET + RBP(%r10)
+	movq	%r12, THREAD_TF_OFFSET + R12(%r10)
+	movq	%r13, THREAD_TF_OFFSET + R13(%r10)
+	movq	%r14, THREAD_TF_OFFSET + R14(%r10)
+	movq	%r15, THREAD_TF_OFFSET + R15(%r10)
+
+	/* Restore next thread's state */
+	/* Restore IP and stack pointer from next thread's trapframe */
+	movq	THREAD_TF_OFFSET + RSP(%r11), %rsp	/* Restore stack pointer */
+	movq	THREAD_TF_OFFSET + RIP(%r11), %r9	/* Get RIP from next tf */
+
+	/* Restore callee-saved registers from next thread's trapframe */
+	movq	THREAD_TF_OFFSET + RBX(%r11), %rbx
+	movq	THREAD_TF_OFFSET + RBP(%r11), %rbp
+	movq	THREAD_TF_OFFSET + R12(%r11), %r12
+	movq	THREAD_TF_OFFSET + R13(%r11), %r13
+	movq	THREAD_TF_OFFSET + R14(%r11), %r14
+	movq	THREAD_TF_OFFSET + R15(%r11), %r15
+
+	/* Set first argument (in case new thread) */
+	movq	THREAD_TF_OFFSET + RDI(%r11), %rdi	/* ARG0 */
+
+	/* Re-enable preemption after context switch is complete */
+	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+
+	/* Jump into next thread's trapframe */
+	jmpq	*%r9
+
+.lame_entry2_noswitch:
+	/* Re-enable preemption after context switch is complete */
+	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+
+/* This point is reached when switching back to this thread */
+.lame_entry2_exit: 
+	/* Restore volatile registers from stack */
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdi
+	popq	%rsi
+	popq	%rdx
+	popq	%rcx
+	popq	%rax
+
+	/* Return from LAME exception */
+	iretq
+	

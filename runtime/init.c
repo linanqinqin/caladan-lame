@@ -14,6 +14,8 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/lame.h>
+/* External configuration variable */
+extern unsigned int cfg_lame_bundle_size;
 /* end */
 
 #include "defs.h"
@@ -152,6 +154,7 @@ static int lame_init(void)
 	int lamedev;
 	struct lame_arg arg;
 	int ret;
+	void *handler_addr;
 
 	lamedev = open("/dev/lame", O_RDWR);
     if (lamedev < 0) {
@@ -160,13 +163,22 @@ static int lame_init(void)
     }
     else {
 		arg.is_present = 1;
-		arg.handler_stub_addr = (__u64)__lame_entry;
+		
+		/* Choose handler based on bundle size for optimal performance */
+		if (cfg_lame_bundle_size == 2) {
+			handler_addr = (void *)__lame_entry2;
+		} else {
+			handler_addr = (void *)__lame_entry;
+		}
+		
+		arg.handler_stub_addr = (__u64)handler_addr;
 		
 		ret = ioctl(lamedev, LAME_REGISTER, &arg);
 		if (ret < 0) {
 			log_err("[errno %d] ioctl LAME_REGISTER failed", errno);
 		} else {
-			log_info("__lame_entry registered at %llx", arg.handler_stub_addr);
+			log_info("LAME handler registered at %llx (bundle size: %u)", 
+				arg.handler_stub_addr, cfg_lame_bundle_size);
 		}
 		close(lamedev);
 	}
