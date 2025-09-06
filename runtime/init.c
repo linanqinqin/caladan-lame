@@ -177,7 +177,7 @@ static int lame_init(void)
 		if (ret < 0) {
 			log_err("[errno %d] ioctl LAME_REGISTER failed", errno);
 		} else {
-			log_info("LAME handler registered at %llx (bundle size: %u)", 
+			log_info("LAME handler registered at %p (bundle size: %u)", 
 				arg.handler_stub_addr, cfg_lame_bundle_size);
 		}
 		close(lamedev);
