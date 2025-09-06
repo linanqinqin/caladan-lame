@@ -227,6 +227,10 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 		return ret;
 	}
 
+	ret = cfg_load(cfgpath);
+	if (ret)
+		return ret;
+
 	/* linanqinqin */
 	/* Print the address of __lame_entry handler */
 	log_info("LAME handler stub address: %p(size=2); %p(general)", (void *)__lame_entry2, (void *)__lame_entry);
@@ -254,10 +258,6 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	// log_info("THREAD_TF_OFFSET: %lu", offsetof(struct thread, tf));
 	/* end */
 	
-	ret = cfg_load(cfgpath);
-	if (ret)
-		return ret;
-
 	log_info("process pid: %u", getpid());
 
 	pthread_barrier_init(&init_barrier, NULL, maxks);
