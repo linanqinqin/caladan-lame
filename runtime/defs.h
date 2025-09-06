@@ -433,24 +433,24 @@ BUILD_ASSERT(offsetof(struct kthread, stats) % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(struct kthread, lame_bundle) % CACHE_LINE_SIZE == 0);
 
 /* Verify LAME bundle structure offsets */
-// BUILD_ASSERT(LAME_BUNDLE_OFFSET == offsetof(struct kthread, lame_bundle));
-// BUILD_ASSERT(LAME_BUNDLE_UTHREADS == offsetof(struct lame_bundle, uthreads));
-// BUILD_ASSERT(LAME_BUNDLE_SIZE == offsetof(struct lame_bundle, size));
-// BUILD_ASSERT(LAME_BUNDLE_USED == offsetof(struct lame_bundle, used));
-// BUILD_ASSERT(LAME_BUNDLE_ACTIVE == offsetof(struct lame_bundle, active));
-// BUILD_ASSERT(LAME_BUNDLE_TOTAL_CYCLES == offsetof(struct lame_bundle, total_cycles));
-// BUILD_ASSERT(LAME_BUNDLE_TOTAL_LAMES == offsetof(struct lame_bundle, total_lames));
-// BUILD_ASSERT(LAME_BUNDLE_ENABLED == offsetof(struct lame_bundle, enabled));
+BUILD_ASSERT(LAME_BUNDLE_OFFSET == offsetof(struct kthread, lame_bundle));
+BUILD_ASSERT(LAME_BUNDLE_UTHREADS == offsetof(struct lame_bundle, uthreads));
+BUILD_ASSERT(LAME_BUNDLE_SIZE == offsetof(struct lame_bundle, size));
+BUILD_ASSERT(LAME_BUNDLE_USED == offsetof(struct lame_bundle, used));
+BUILD_ASSERT(LAME_BUNDLE_ACTIVE == offsetof(struct lame_bundle, active));
+BUILD_ASSERT(LAME_BUNDLE_TOTAL_CYCLES == offsetof(struct lame_bundle, total_cycles));
+BUILD_ASSERT(LAME_BUNDLE_TOTAL_LAMES == offsetof(struct lame_bundle, total_lames));
+BUILD_ASSERT(LAME_BUNDLE_ENABLED == offsetof(struct lame_bundle, enabled));
 
-// /* Verify lame_uthread_wrapper structure offsets */
-// BUILD_ASSERT(LAME_UTHREAD_WRAPPER_UTHREAD == offsetof(struct lame_uthread_wrapper, uthread));
-// BUILD_ASSERT(LAME_UTHREAD_WRAPPER_PRESENT == offsetof(struct lame_uthread_wrapper, present));
-// BUILD_ASSERT(LAME_UTHREAD_WRAPPER_CYCLES == offsetof(struct lame_uthread_wrapper, cycles));
-// BUILD_ASSERT(LAME_UTHREAD_WRAPPER_LAME_COUNT == offsetof(struct lame_uthread_wrapper, lame_count));
-// BUILD_ASSERT(LAME_UTHREAD_WRAPPER_SIZE == sizeof(struct lame_uthread_wrapper));
+/* Verify lame_uthread_wrapper structure offsets */
+BUILD_ASSERT(LAME_UTHREAD_WRAPPER_UTHREAD == offsetof(struct lame_uthread_wrapper, uthread));
+BUILD_ASSERT(LAME_UTHREAD_WRAPPER_PRESENT == offsetof(struct lame_uthread_wrapper, present));
+BUILD_ASSERT(LAME_UTHREAD_WRAPPER_CYCLES == offsetof(struct lame_uthread_wrapper, cycles));
+BUILD_ASSERT(LAME_UTHREAD_WRAPPER_LAME_COUNT == offsetof(struct lame_uthread_wrapper, lame_count));
+BUILD_ASSERT(LAME_UTHREAD_WRAPPER_SIZE == sizeof(struct lame_uthread_wrapper));
 
-// /* Verify thread structure trapframe offset */
-// BUILD_ASSERT(THREAD_TF_OFFSET == offsetof(struct thread, tf));
+/* Verify thread structure trapframe offset */
+BUILD_ASSERT(THREAD_TF_OFFSET == offsetof(struct thread, tf));
 /* end */
 
 DECLARE_PERTHREAD(struct kthread *, mykthread);

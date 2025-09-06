@@ -28,12 +28,12 @@
 
 /* Bundle field offsets */
 #define LAME_BUNDLE_UTHREADS        (0)     /* array of uthread wrappers */
-#define LAME_BUNDLE_SIZE            (200)   /* configured bundle size */
-#define LAME_BUNDLE_USED            (204)   /* number of occupied slots */
-#define LAME_BUNDLE_ACTIVE          (208)   /* current running uthread index */
-#define LAME_BUNDLE_TOTAL_CYCLES    (216)   /* total cycles across all uthreads */
-#define LAME_BUNDLE_TOTAL_LAMES     (224)   /* total LAMEs handled */
-#define LAME_BUNDLE_ENABLED         (232)   /* dynamic runtime enable/disable flag */
+#define LAME_BUNDLE_SIZE            (256)   /* configured bundle size */
+#define LAME_BUNDLE_USED            (260)   /* number of occupied slots */
+#define LAME_BUNDLE_ACTIVE          (264)   /* current running uthread index */
+#define LAME_BUNDLE_TOTAL_CYCLES    (272)   /* total cycles across all uthreads */
+#define LAME_BUNDLE_TOTAL_LAMES     (280)   /* total LAMEs handled */
+#define LAME_BUNDLE_ENABLED         (288)   /* dynamic runtime enable/disable flag */
 
 /*
  * LAME Uthread Wrapper Structure Offsets
@@ -44,7 +44,7 @@
  *     uint64_t cycles;      // 8 bytes  
  *     uint64_t lame_count;  // 8 bytes
  * };
- * Total size: 25 bytes (with 7 bytes padding to align to 8-byte boundary)
+ * Total size: 32 bytes (with 7 bytes padding to align to 8-byte boundary)
  */
 
 /* Uthread wrapper field offsets */
@@ -57,16 +57,16 @@
 /*
  * Kthread Structure - LAME Bundle Offset
  * 
- * The lame_bundle is located at the 11th cache line (offset 0x2C0 = 704 bytes)
+ * The lame_bundle is located at the 11th cache line (offset 0x300 = 768 bytes)
  * from the start of the kthread structure.
  */
 
-#define LAME_BUNDLE_OFFSET          (0x2C0)  /* offset of lame_bundle in kthread */
+#define LAME_BUNDLE_OFFSET          (0x300)  /* offset of lame_bundle in kthread */
 
 /*
  * Thread Structure - Trapframe Offset
  * 
- * The thread_tf is located at offset 8 from the start of the thread structure.
+ * The thread_tf is located at offset 0 from the start of the thread structure.
  */
 
-#define THREAD_TF_OFFSET            (8)      /* offset of tf in thread_t */
+#define THREAD_TF_OFFSET            (0)      /* offset of tf in thread_t */
