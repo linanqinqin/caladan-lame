@@ -236,6 +236,22 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	if (ret) {
 		log_info("WARNING: LAME capability not enabled");
 	}
+
+	/* tmp debug */
+	log_info("LAME_BUNDLE_OFFSET: %d", offsetof(struct kthread, lame_bundle));
+	log_info("LAME_BUNDLE_UTHREADS: %d", offsetof(struct lame_bundle, uthreads));
+	log_info("LAME_BUNDLE_SIZE: %d", offsetof(struct lame_bundle, size));
+	log_info("LAME_BUNDLE_USED: %d", offsetof(struct lame_bundle, used));
+	log_info("LAME_BUNDLE_ACTIVE: %d", offsetof(struct lame_bundle, active));
+	log_info("LAME_BUNDLE_TOTAL_CYCLES: %d", offsetof(struct lame_bundle, total_cycles));
+	log_info("LAME_BUNDLE_TOTAL_LAMES: %d", offsetof(struct lame_bundle, total_lames));
+	log_info("LAME_BUNDLE_ENABLED: %d", offsetof(struct lame_bundle, enabled));
+	log_info("LAME_UTHREAD_WRAPPER_UTHREAD: %d", offsetof(struct lame_uthread_wrapper, uthread));
+	log_info("LAME_UTHREAD_WRAPPER_PRESENT: %d", offsetof(struct lame_uthread_wrapper, present));
+	log_info("LAME_UTHREAD_WRAPPER_CYCLES: %d", offsetof(struct lame_uthread_wrapper, cycles));
+	log_info("LAME_UTHREAD_WRAPPER_LAME_COUNT: %d", offsetof(struct lame_uthread_wrapper, lame_count));
+	log_info("LAME_UTHREAD_WRAPPER_SIZE: %d", offsetof(struct lame_uthread_wrapper, size));
+	log_info("THREAD_TF_OFFSET: %d", offsetof(struct thread, tf));
 	/* end */
 	
 	ret = cfg_load(cfgpath);
