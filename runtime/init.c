@@ -229,7 +229,7 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 
 	/* linanqinqin */
 	/* Print the address of __lame_entry handler */
-	log_info("__lame_entry handler stub address: %p", (void *)__lame_entry);
+	log_info("LAME handler stub address: %p(size=2); %p(general)", (void *)__lame_entry2, (void *)__lame_entry);
 
 	/* register lame handler via ioctl */
 	ret = lame_init();
