@@ -248,7 +248,7 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	log_info("LAME_BUNDLE_ENABLED: %lu", offsetof(struct lame_bundle, enabled));
 	log_info("LAME_UTHREAD_WRAPPER_UTHREAD: %lu", offsetof(struct lame_uthread_wrapper, uthread));
 	log_info("LAME_UTHREAD_WRAPPER_PRESENT: %lu", offsetof(struct lame_uthread_wrapper, present));
-	log_info("LAME_UTHREAD_WRAPPER_CYCLES: %d", offsetof(struct lame_uthread_wrapper, cycles));
+	log_info("LAME_UTHREAD_WRAPPER_CYCLES: %lu", offsetof(struct lame_uthread_wrapper, cycles));
 	log_info("LAME_UTHREAD_WRAPPER_LAME_COUNT: %lu", offsetof(struct lame_uthread_wrapper, lame_count));
 	log_info("LAME_UTHREAD_WRAPPER_SIZE: %lu", sizeof(struct lame_uthread_wrapper));
 	log_info("THREAD_TF_OFFSET: %lu", offsetof(struct thread, tf));
