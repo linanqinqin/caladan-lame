@@ -201,4 +201,4 @@ __lame_entry2:
 .lame_entry2_noswitch:
 	/* Re-enable preemption */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
-	jmpq	.lame_entry2_exit
+	jmp		.lame_entry2_exit
