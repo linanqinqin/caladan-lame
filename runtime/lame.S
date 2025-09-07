@@ -130,7 +130,6 @@ __lame_entry:
 .globl __lame_entry2
 .type __lame_entry2, @function
 __lame_entry2:
-	/* linanqinqin */
 	/* Disable preemption to protect LAME context switch atomicity */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
@@ -164,9 +163,10 @@ __lame_entry2:
 	leaq	LAME_BUNDLE_OFFSET + LAME_BUNDLE_UTHREADS(%r8), %r9	/* bundle.uthreads base */
 	shll	$2, %eax		/* Multiply index by 4 (since 32/8 = 4) */
 	movq	(%r9, %rax, 8), %r10	/* Load current uthread pointer */
-
-	/* Toggle active index: active = active ^ 1 (0 <-> 1) */
-	xorl	$1, %eax
+	
+	/* restore EAX back to unscaled active index, then toggle */
+	shrl	$2, %eax		/* unscale back to 0/1 */
+	xorl	$1, %eax		/* next = active ^ 1 */
 	movl	%eax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_ACTIVE(%r8)	/* Store new active index */
 
 	/* Get next uthread pointer: bundle.uthreads[active].uthread */
