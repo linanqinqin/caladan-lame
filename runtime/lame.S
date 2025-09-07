@@ -176,11 +176,46 @@ __lame_entry2:
 	/* Update __self to point to the new uthread */
 	movq	%r11, %gs:__perthread___self(%rip)
 
-	/* Perform context switch via __lame_jmp_thread_direct */
-	leaq	THREAD_TF_OFFSET(%r10), %rdi	/* &cur_th->tf */
-	leaq	THREAD_TF_OFFSET(%r11), %rsi	/* &next_th->tf */
-	call	__lame_jmp_thread_direct
-	/* After returning to this thread, fall through to exit */
+	/* Flattened context switch - save current thread state */
+	/* Save IP and stack pointer to current thread's trapframe */
+	/* IP should point to .lame_entry2_exit for when we return to this thread */
+	leaq	.lame_entry2_exit(%rip), %r9	/* Get address of exit label */
+	movq	%r9, THREAD_TF_OFFSET + RIP(%r10)	/* Save RIP to current tf */
+	movq	%rsp, THREAD_TF_OFFSET + RSP(%r10)	/* Save current RSP to current tf */
+
+	/* Save callee-saved registers to current thread's trapframe */
+	movq	%rbx, THREAD_TF_OFFSET + RBX(%r10)
+	movq	%rbp, THREAD_TF_OFFSET + RBP(%r10)
+	movq	%r12, THREAD_TF_OFFSET + R12(%r10)
+	movq	%r13, THREAD_TF_OFFSET + R13(%r10)
+	movq	%r14, THREAD_TF_OFFSET + R14(%r10)
+	movq	%r15, THREAD_TF_OFFSET + R15(%r10)
+
+	/* Restore next thread's state */
+	/* Restore IP and stack pointer from next thread's trapframe */
+	movq	THREAD_TF_OFFSET + RSP(%r11), %rsp	/* Restore stack pointer */
+	movq	THREAD_TF_OFFSET + RIP(%r11), %r9	/* Get RIP from next tf */
+
+	/* Restore callee-saved registers from next thread's trapframe */
+	movq	THREAD_TF_OFFSET + RBX(%r11), %rbx
+	movq	THREAD_TF_OFFSET + RBP(%r11), %rbp
+	movq	THREAD_TF_OFFSET + R12(%r11), %r12
+	movq	THREAD_TF_OFFSET + R13(%r11), %r13
+	movq	THREAD_TF_OFFSET + R14(%r11), %r14
+	movq	THREAD_TF_OFFSET + R15(%r11), %r15
+
+	/* Set first argument (in case new thread) */
+	movq	THREAD_TF_OFFSET + RDI(%r11), %rdi	/* ARG0 */
+
+	/* Re-enable preemption after context switch is complete */
+	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+
+	/* Jump into next thread's trapframe */
+	jmpq	*%r9
+
+.lame_entry2_noswitch:
+	/* Re-enable preemption after context switch is complete */
+	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 
 /* This point is reached when switching back to this thread */
 .lame_entry2_exit: 
@@ -197,8 +232,3 @@ __lame_entry2:
 
 	/* Return from LAME exception */
 	iretq
-
-.lame_entry2_noswitch:
-	/* Re-enable preemption */
-	subl	$1, %gs:__perthread_preempt_cnt(%rip)
-	jmp		.lame_entry2_exit
