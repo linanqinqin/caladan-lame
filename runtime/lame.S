@@ -162,6 +162,7 @@ __lame_entry2:
 
 	/* Calculate current uthread pointer: bundle.uthreads[active].uthread */
 	leaq	LAME_BUNDLE_OFFSET + LAME_BUNDLE_UTHREADS(%r8), %r9	/* bundle.uthreads base */
+	shll	$2, %eax		/* Multiply index by 4 (since 32/8 = 4) */
 	movq	(%r9, %rax, 8), %r10	/* Load current uthread pointer */
 
 	/* Toggle active index: active = active ^ 1 (0 <-> 1) */
@@ -169,6 +170,7 @@ __lame_entry2:
 	movl	%eax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_ACTIVE(%r8)	/* Store new active index */
 
 	/* Get next uthread pointer: bundle.uthreads[active].uthread */
+	shll	$2, %eax		/* Multiply new index by 4 (since 32/8 = 4) */
 	movq	(%r9, %rax, 8), %r11	/* Load next uthread pointer */
 
 	/* Update __self to point to the new uthread */
@@ -230,4 +232,3 @@ __lame_entry2:
 
 	/* Return from LAME exception */
 	iretq
-	
