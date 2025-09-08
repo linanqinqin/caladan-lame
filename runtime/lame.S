@@ -236,7 +236,7 @@ __lame_entry2:
 /**
  * __lame_entry2_tsc - __lame_entry2 with TSC accounting
  * 
- * TSC is measured and put in lame_uthread_wrapper.cycles/lame_uthread_wrapper.lame_count
+ * TSC is measured and put in lame_bundle.total_cycles/lame_bundle.total_lames
  */
 .align 16
 .globl __lame_entry2_tsc
@@ -330,14 +330,14 @@ __lame_entry2_tsc:
 	/* Re-enable preemption after context switch is complete */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 
-	/* save end tsc, calculate elapsed tsc and save it to lame_uthread_wrapper.cycles */
-	lfence
-	rdtsc
+	/* save end tsc, calculate elapsed tsc */
+	rdtscp
 	shl		$32, %rdx
 	or		%rdx, %rax				/* RAX = end_tsc */
+	lfence
 	subq	%rcx, %rax				/* RAX = delta */
 
-	/* per-bundle totals */
+	/* per-bundle totals saved to lame_bundle.total_cycles and lame_bundle.total_lames */
 	addq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_CYCLES(%r8)
 	addq	$1, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_LAMES(%r8)
 	
