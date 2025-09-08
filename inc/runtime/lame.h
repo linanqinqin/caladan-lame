@@ -29,6 +29,11 @@ extern void lame_sched_disable(struct kthread *k);
 extern bool lame_sched_is_statically_enabled(struct kthread *k);
 extern bool lame_sched_is_dynamically_enabled(struct kthread *k);
 
+/* TSC accounting functions */
+#ifdef CONFIG_LAME_TSC
+extern void lame_print_tsc_counters(void);
+#endif
+
 /* Internal symbols for testing (not part of public API) */
 #ifdef LAME_TESTING
 extern unsigned int cfg_lame_bundle_size;

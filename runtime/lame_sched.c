@@ -599,4 +599,18 @@ __always_inline void lame_handle(void)
 	log_debug("[LAME][kthread:%d][func:lame_handle] resumed uthread %p",
 		  myk_index(), cur_th);
 }
+
+#ifdef CONFIG_LAME_TSC
+void lame_print_tsc_counters(void)
+{
+	unsigned int i;
+	for (i = 0; i < maxks; i++) {
+		struct kthread *k = ks[i];
+		if (!k)
+			continue;
+		log_info("[LAME][TSC][kthread:%u] total_cycles=%lu total_lames=%lu", i,
+		         k->lame_bundle.total_cycles, k->lame_bundle.total_lames);
+	}
+}
+#endif
 /* end */

@@ -7,6 +7,9 @@
 #include <base/init.h>
 #include <base/log.h>
 #include <base/thread.h>
+/* linanqinqin */
+#include <runtime/lame.h>
+/* end */
 
 #include "init_internal.h"
 
@@ -17,6 +20,9 @@ void __weak init_shutdown(int status)
 	log_info("init: shutting down -> %s",
 		 status == EXIT_SUCCESS ? "SUCCESS" : "FAILURE");
 	/* linanqinqin */
+#ifdef CONFIG_LAME_TSC
+	lame_print_tsc_counters();
+#endif
 	log_flush();
 	/* end */
 	exit(status);
