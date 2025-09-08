@@ -270,11 +270,11 @@ __lame_entry2_tsc:
 	/* Check if LAME scheduling is enabled (branch-free) */
 	movb	LAME_BUNDLE_OFFSET + LAME_BUNDLE_ENABLED(%r8), %al	/* bundle.enabled */
 	testb	%al, %al
-	jz	.lame_entry2_noswitch	/* Exit if disabled */
+	jz	.lame_entry2_tsc_noswitch	/* Exit if disabled */
 
 	/* Check if bundle has exactly 2 uthreads (used == 2) */
 	cmpl	$2, LAME_BUNDLE_OFFSET + LAME_BUNDLE_USED(%r8)	/* bundle.used */
-	jne	.lame_entry2_noswitch	/* Exit if not exactly 2 (this means there is only one uthread in the bundle, thus no switching needed) */
+	jne	.lame_entry2_tsc_noswitch	/* Exit if not exactly 2 (this means there is only one uthread in the bundle, thus no switching needed) */
 
 	/* Get current active index */
 	movl	LAME_BUNDLE_OFFSET + LAME_BUNDLE_ACTIVE(%r8), %eax	/* bundle.active */
@@ -299,7 +299,7 @@ __lame_entry2_tsc:
 	/* Flattened context switch - save current thread state */
 	/* Save IP and stack pointer to current thread's trapframe */
 	/* IP should point to .lame_entry2_exit for when we return to this thread */
-	leaq	.lame_entry2_exit(%rip), %r9	/* Get address of exit label */
+	leaq	.lame_entry2_tsc_exit(%rip), %r9	/* Get address of exit label */
 	movq	%r9, THREAD_TF_OFFSET + RIP(%r10)	/* Save RIP to current tf */
 	movq	%rsp, THREAD_TF_OFFSET + RSP(%r10)	/* Save current RSP to current tf */
 
@@ -344,12 +344,12 @@ __lame_entry2_tsc:
 	/* Jump into next thread's trapframe */
 	jmpq	*%r9
 
-.lame_entry2_noswitch:
+.lame_entry2_tsc_noswitch:
 	/* Re-enable preemption after context switch is complete */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 
 /* This point is reached when switching back to this thread */
-.lame_entry2_exit: 
+.lame_entry2_tsc_exit: 
 	/* Restore volatile registers from stack */
 	popq	%r11
 	popq	%r10
