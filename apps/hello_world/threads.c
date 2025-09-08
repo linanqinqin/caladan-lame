@@ -18,8 +18,10 @@
 #define MIN_MATRIX_SIZE 128
 #define MAX_MATRIX_SIZE 512
 
-// Global variable for LAME enable flag
+// Global variables
 int enable_lame = 0;
+int total_tasks = -1;  // -1 means infinite, otherwise total number of tasks to run
+int tasks_completed = 0;  // Counter for completed tasks
 
 // Thread arguments structure
 typedef struct {
@@ -118,6 +120,7 @@ void *worker_thread(void *arg)
     pthread_mutex_lock(args->counter_mutex);
     (*args->shared_counter)++;
     int current_count = *args->shared_counter;
+    tasks_completed++;  // Update global task counter
     pthread_mutex_unlock(args->counter_mutex);
     
     printf("Thread %d finished. Total completed: %d\n", thread_id, current_count);
@@ -138,8 +141,9 @@ int main(int argc, char *argv[])
     int opt;
     num_threads = 4;  // Default value
     enable_lame = 0;  // Default value
+    total_tasks = -1;  // Default to infinite
     
-    while ((opt = getopt(argc, argv, "w:l")) != -1) {
+    while ((opt = getopt(argc, argv, "w:lt:")) != -1) {
         switch (opt) {
             case 'w':
                 num_threads = atoi(optarg);
@@ -151,12 +155,20 @@ int main(int argc, char *argv[])
             case 'l':
                 enable_lame = 1;
                 break;
+            case 't':
+                total_tasks = atoi(optarg);
+                if (total_tasks <= 0) {
+                    printf("Error: Total tasks must be greater than 0\n");
+                    return 1;
+                }
+                break;
             default:
-                printf("Usage: %s [-w num_threads] [-l]\n", argv[0]);
+                printf("Usage: %s [-w num_threads] [-l] [-t total_tasks]\n", argv[0]);
                 printf("  -w num_threads: Number of worker threads (default: 4)\n");
                 printf("  -l: Enable LAME interrupts (default: disabled)\n");
+                printf("  -t total_tasks: Total number of tasks to run (default: infinite)\n");
                 printf("  Program runs continuously, spawning new threads as old ones finish\n");
-                printf("Example: %s -w 8 -l\n", argv[0]);
+                printf("Example: %s -w 8 -l -t 100\n", argv[0]);
                 return 1;
         }
     }
@@ -168,7 +180,11 @@ int main(int argc, char *argv[])
     printf("Spawning %d worker threads with random matrix sizes (%d-%d)...\n", 
            num_threads, MIN_MATRIX_SIZE, MAX_MATRIX_SIZE);
     printf("LAME interrupts: %s\n", enable_lame ? "ENABLED" : "DISABLED");
-    printf("Running continuously - press Ctrl+C to stop\n");
+    if (total_tasks > 0) {
+        printf("Total tasks to run: %d\n", total_tasks);
+    } else {
+        printf("Running continuously - press Ctrl+C to stop\n");
+    }
     
     // Allocate array for thread arguments
     thread_args = malloc(num_threads * sizeof(thread_args_t));
@@ -188,9 +204,32 @@ int main(int argc, char *argv[])
     
     // Main continuous loop
     while (1) {
+        // Check if we've reached the total task limit
+        if (total_tasks > 0 && tasks_completed >= total_tasks) {
+            printf("Reached total task limit (%d). Waiting for remaining threads to complete...\n", total_tasks);
+            
+            // Wait for all remaining threads to complete
+            while (shared_counter < thread_counter) {
+                printf("Waiting for %d threads to complete...\n", thread_counter - shared_counter);
+                usleep(100000);  // 100ms
+            }
+            
+            printf("All tasks completed successfully!\n");
+            printf("Final statistics: %d threads spawned, %d tasks completed\n", thread_counter, tasks_completed);
+            break;
+        }
+        
         // Calculate how many threads are currently running
         int threads_running = thread_counter - shared_counter;
         int threads_to_spawn = num_threads - threads_running;
+        
+        // Don't spawn more threads if we're approaching the total task limit
+        if (total_tasks > 0) {
+            int remaining_tasks = total_tasks - tasks_completed;
+            if (threads_to_spawn > remaining_tasks) {
+                threads_to_spawn = remaining_tasks;
+            }
+        }
         
         if (threads_to_spawn > 0) {
             printf("Threads spawned: %d, completed: %d, running: %d, need to spawn: %d\n", 
