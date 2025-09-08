@@ -8,7 +8,7 @@
 #include <base/log.h>
 #include <base/thread.h>
 /* linanqinqin */
-#include <runtime/lame.h>
+#include <base/lame.h>
 /* end */
 
 #include "init_internal.h"
