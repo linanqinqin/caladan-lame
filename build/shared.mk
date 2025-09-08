@@ -15,6 +15,11 @@ ifeq ($(CONFIG_NO_UINTR),n)
 FLAGS += -muintr -DCONFIG_UINTR
 endif
 
+# LAME TSC accounting flag
+ifeq ($(CONFIG_LAME_TSC),y)
+FLAGS += -DCONFIG_LAME_TSC
+endif
+
 LDFLAGS = -T $(ROOT_PATH)/base/base.ld
 CC      ?= gcc
 LD      = $(CC)
