@@ -12,6 +12,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
+#include <getopt.h>
 
 #define NUM_THREADS_MAX 256
 #define MIN_MATRIX_SIZE 128
@@ -133,22 +134,31 @@ int main(int argc, char *argv[])
     int i, ret;
     int thread_counter = 0;  // Global thread counter for unique IDs
     
-    // Check command line arguments
-    if (argc < 2 || argc > 3) {
-        printf("Usage: %s <number_of_threads> [enable_lame]\n", argv[0]);
-        printf("Example: %s 4\n", argv[0]);
-        printf("Example: %s 4 1\n", argv[0]);
-        printf("  Second argument (any value) enables LAME interrupts\n");
-        printf("  Program runs continuously, spawning new threads as old ones finish\n");
-        return 1;
-    }
+    // Parse command line arguments using getopt
+    int opt;
+    num_threads = 4;  // Default value
+    enable_lame = 0;  // Default value
     
-    num_threads = atoi(argv[1]);
-    enable_lame = (argc == 3);  // Set global variable if second argument is present
-    
-    if (num_threads <= 0 || num_threads > NUM_THREADS_MAX) {
-        printf("Error: Number of threads must be between 1 and %d\n", NUM_THREADS_MAX);
-        return 1;
+    while ((opt = getopt(argc, argv, "w:l")) != -1) {
+        switch (opt) {
+            case 'w':
+                num_threads = atoi(optarg);
+                if (num_threads <= 0 || num_threads > NUM_THREADS_MAX) {
+                    printf("Error: Number of threads must be between 1 and %d\n", NUM_THREADS_MAX);
+                    return 1;
+                }
+                break;
+            case 'l':
+                enable_lame = 1;
+                break;
+            default:
+                printf("Usage: %s [-w num_threads] [-l]\n", argv[0]);
+                printf("  -w num_threads: Number of worker threads (default: 4)\n");
+                printf("  -l: Enable LAME interrupts (default: disabled)\n");
+                printf("  Program runs continuously, spawning new threads as old ones finish\n");
+                printf("Example: %s -w 8 -l\n", argv[0]);
+                return 1;
+        }
     }
     
     // Seed random number generator for matrix sizes
