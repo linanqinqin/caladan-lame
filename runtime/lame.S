@@ -146,6 +146,7 @@ __lame_entry2:
 	rdtsc
 	shlq	$32, %rdx
 	orq		%rdx, %rax
+	movq	%rax, %rcx 	/* RCX = start tsc */
 	popq	%rbx
 #endif
 
@@ -158,9 +159,6 @@ __lame_entry2:
 
 	/* Get current kthread from perthread storage */
 	movq	%gs:__perthread_mykthread(%rip), %r8
-#ifdef CONFIG_LAME_TSC
-	movq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_LAMES(%r8)
-#endif
 
 	/* Check if LAME scheduling is enabled (branch-free) */
 	movb	LAME_BUNDLE_OFFSET + LAME_BUNDLE_ENABLED(%r8), %al	/* bundle.enabled */
@@ -226,11 +224,15 @@ __lame_entry2:
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 
 #ifdef CONFIG_LAME_TSC
+	pushq	%rcx
 	/* save end tsc, calculate elapsed tsc, and update bundle totals */
 	rdtscp
 	shlq	$32, %rdx
 	orq		%rdx, %rax			/* RAX = end_tsc */
-	movq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_CYCLES(%r8)
+	popq	%rcx
+	subq	%rcx, %rax			/* RAX = delta */
+	addq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_CYCLES(%r8)
+	addq	$1, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_LAMES(%r8)
 	pushq	%rbx
 	xorq	%rax, %rax
 	cpuid
