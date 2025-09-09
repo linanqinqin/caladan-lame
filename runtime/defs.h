@@ -448,6 +448,7 @@ BUILD_ASSERT(LAME_UTHREAD_WRAPPER_PRESENT == offsetof(struct lame_uthread_wrappe
 BUILD_ASSERT(LAME_UTHREAD_WRAPPER_CYCLES == offsetof(struct lame_uthread_wrapper, cycles));
 BUILD_ASSERT(LAME_UTHREAD_WRAPPER_LAME_COUNT == offsetof(struct lame_uthread_wrapper, lame_count));
 BUILD_ASSERT(LAME_UTHREAD_WRAPPER_SIZE == sizeof(struct lame_uthread_wrapper));
+BUILD_ASSERT(LAME_UTHREAD_WRAPPER_SIZE == 0x20); /* must be 32 bytes */
 
 /* Verify thread structure trapframe offset */
 BUILD_ASSERT(THREAD_TF_OFFSET == offsetof(struct thread, tf));
