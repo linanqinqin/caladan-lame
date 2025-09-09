@@ -292,7 +292,8 @@ __lame_entry2:
 	orq		%rdx, %rax			/* RAX = end_tsc */
 	popq	%rcx
 	subq	%rcx, %rax			/* RAX = delta */
-	addq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_CYCLES(%r8)
+	movq	%gs:__perthread_mykthread(%rip), %rdx
+	addq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_CYCLES(%rdx)
 	/* do not increment total_lames; it's already incremented in the switch-to path */
 	pushq	%rbx
 	xorq	%rax, %rax
