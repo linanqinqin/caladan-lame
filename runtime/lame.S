@@ -140,11 +140,11 @@ __lame_entry2:
 
 #ifdef CONFIG_LAME_TSC
 	/* Save start TSC to rcx */
-	lfence
-	rdtsc
-	shl		$32, %rdx
-	or		%rdx, %rax
-	movq	%rax, %rcx
+	xorq	%rax, %rax
+	cpuid
+	rdtscp
+	shlq	$32, %rdx
+	orq		%rdx, %rax
 #endif
 
 	pushq	%rsi
@@ -156,6 +156,9 @@ __lame_entry2:
 
 	/* Get current kthread from perthread storage */
 	movq	%gs:__perthread_mykthread(%rip), %r8
+#ifdef CONFIG_LAME_TSC
+	movq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_LAMES(%r8)
+#endif
 
 	/* Check if LAME scheduling is enabled (branch-free) */
 	movb	LAME_BUNDLE_OFFSET + LAME_BUNDLE_ENABLED(%r8), %al	/* bundle.enabled */
@@ -222,13 +225,12 @@ __lame_entry2:
 
 #ifdef CONFIG_LAME_TSC
 	/* save end tsc, calculate elapsed tsc, and update bundle totals */
+	xorq	%rax, %rax
+	cpuid
 	rdtscp
-	shl		$32, %rdx
-	or		%rdx, %rax			/* RAX = end_tsc */
-	lfence
-	subq	%rcx, %rax			/* RAX = delta */
-	addq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_CYCLES(%r8)
-	addq	$1, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_LAMES(%r8)
+	shlq		$32, %rdx
+	orq		%rdx, %rax			/* RAX = end_tsc */
+	movq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_CYCLES(%r8)
 #endif
 
 	/* Jump into next thread's trapframe */
