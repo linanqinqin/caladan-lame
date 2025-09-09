@@ -140,11 +140,15 @@ __lame_entry2:
 
 #ifdef CONFIG_LAME_TSC
 	/* Save start TSC to rcx */
+	pushq	%rbx
+	pushq	%rcx
 	xorq	%rax, %rax
 	cpuid
 	rdtscp
 	shlq	$32, %rdx
 	orq		%rdx, %rax
+	popq	%rcx
+	popq	%rbx
 #endif
 
 	pushq	%rsi
@@ -225,12 +229,16 @@ __lame_entry2:
 
 #ifdef CONFIG_LAME_TSC
 	/* save end tsc, calculate elapsed tsc, and update bundle totals */
+	pushq	%rbx
+	pushq	%rcx
 	xorq	%rax, %rax
 	cpuid
 	rdtscp
 	shlq		$32, %rdx
 	orq		%rdx, %rax			/* RAX = end_tsc */
 	movq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_CYCLES(%r8)
+	popq	%rcx
+	popq	%rbx
 #endif
 
 	/* Jump into next thread's trapframe */
