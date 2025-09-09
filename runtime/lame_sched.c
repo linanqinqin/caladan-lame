@@ -577,7 +577,7 @@ void lame_print_tsc_counters(void)
 		if (!k)
 			continue;
 		log_warn("[LAME][TSC][kthread:%u] avg_cycles=%lu total_cycles=%lu total_lames=%lu", i,
-		         k->lame_bundle.total_cycles / k->lame_bundle.total_lames, 
+				 k->lame_bundle.total_lames? k->lame_bundle.total_cycles / k->lame_bundle.total_lames : 0, 
 				 k->lame_bundle.total_cycles, k->lame_bundle.total_lames);
 	}
 }
