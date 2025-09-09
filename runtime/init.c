@@ -16,6 +16,7 @@
 #include <linux/lame.h>
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
+extern unsigned int cfg_lame_tsc;
 /* end */
 
 #include "defs.h"
@@ -164,11 +165,29 @@ static int lame_init(void)
     else {
 		arg.is_present = 1;
 		
-		/* Choose handler based on bundle size for optimal performance */
-		if (cfg_lame_bundle_size == 2) {
-			handler_addr = (void *)__lame_entry2;
-		} else {
-			handler_addr = (void *)__lame_entry;
+		if (cfg_lame_tsc != LAME_TSC_OFF) {
+			if (cfg_lame_bundle_size != 2) {
+				log_err("LAME TSC measurement mode is only supported for bundle size 2, got %u", cfg_lame_bundle_size);
+				return -EINVAL;
+			}
+
+			/* Choose handler based on TSC measurement mode */
+			if (cfg_lame_tsc == LAME_TSC_PRETEND) {
+				handler_addr = (void *)__lame_entry2_pretend;
+			} else {
+				handler_addr = (void *)__lame_entry_nop;
+			}
+
+			log_warn("WARNING: in LAME TSC measurement mode (%s)", 
+					cfg_lame_tsc == LAME_TSC_PRETEND ? "pretend" : "nop");
+		}
+		else {
+			/* Choose handler based on bundle size for optimal performance */
+			if (cfg_lame_bundle_size == 2) {
+				handler_addr = (void *)__lame_entry2;
+			} else {
+				handler_addr = (void *)__lame_entry;
+			}
 		}
 		
 		arg.handler_stub_addr = (__u64)handler_addr;
@@ -238,7 +257,7 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	/* register lame handler via ioctl */
 	ret = lame_init();
 	if (ret) {
-		log_info("WARNING: LAME capability not enabled");
+		log_warn("WARNING: LAME capability not enabled");
 	}
 
 	/* tmp debug */

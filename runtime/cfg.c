@@ -23,6 +23,7 @@ int preferred_socket;
 /* linanqinqin */
 /* LAME bundle size configuration */
 unsigned int cfg_lame_bundle_size = LAME_BUNDLE_SIZE_DEFAULT;
+unsigned int cfg_lame_tsc = LAME_TSC_OFF;
 /* end */
 
 /*
@@ -231,7 +232,6 @@ static int parse_runtime_quantum_us(const char *name, const char *val)
 }
 
 /* linanqinqin */
-
 static int parse_runtime_lame_bundle_size(const char *name, const char *val)
 {
 	long tmp;
@@ -248,6 +248,20 @@ static int parse_runtime_lame_bundle_size(const char *name, const char *val)
 	}
 
 	cfg_lame_bundle_size = tmp;
+	return 0;
+}
+
+static int parse_runtime_lame_tsc(const char *name, const char *val)
+{
+	if (!strcmp(val, "pretend") || !strcmp(val, "pt")) {
+		cfg_lame_tsc = LAME_TSC_PRETEND;
+	} else if (!strcmp(val, "nop") || !strcmp(val, "no")) {
+		cfg_lame_tsc = LAME_TSC_NOP;
+	} else {
+		log_err("runtime_lame_tsc must be pretend(pt) or nop(no), got %s", val);
+		return -EINVAL;
+	}
+
 	return 0;
 }
 /* end */
@@ -421,6 +435,7 @@ static const struct cfg_handler cfg_handlers[] = {
 	{ "runtime_quantum_us", parse_runtime_quantum_us, false },
 	/* linanqinqin */
 	{ "runtime_lame_bundle_size", parse_runtime_lame_bundle_size, false },
+	{ "runtime_lame_tsc", parse_runtime_lame_tsc, false },
 	/* end */
 	{ "static_arp", parse_static_arp_entry, false },
 	{ "log_level", parse_log_level, false },

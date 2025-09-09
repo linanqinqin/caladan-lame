@@ -1047,9 +1047,7 @@ static void thread_finish_exit(void)
 	/* if the main thread dies, kill the whole program */
 	if (unlikely(th->main_thread)) {
 		/* linanqinqin */
-#ifdef CONFIG_LAME_TSC
 		lame_print_tsc_counters();
-#endif
 		/* end */
 		init_shutdown(EXIT_SUCCESS);
 	}

@@ -99,6 +99,11 @@ extern void __lame_jmp_thread_direct(struct thread_tf *oldtf,
 /* Default bundle size if not configured */
 #define LAME_BUNDLE_SIZE_DEFAULT	1
 
+/* LAME TSC measurement modes */
+#define LAME_TSC_OFF			0x0
+#define LAME_TSC_PRETEND		0x1
+#define LAME_TSC_NOP			0x2
+
 /* uthread wrapper for bundle scheduling */
 struct lame_uthread_wrapper {
 	thread_t		*uthread;	/* pointer to the actual uthread */
