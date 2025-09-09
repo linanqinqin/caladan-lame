@@ -111,13 +111,12 @@ __lame_entry:
  * optimized for bundle size 2. It performs the following steps:
  * 1. Save volatile CPU state (except callee registers, rsp, rip, rflags)
  * 2. Get current kthread from perthread storage
- * 3. Check if LAME scheduling is enabled (branch-free)
+ * 3. Check if LAME scheduling is enabled (branch-free) and if bundle.used == 2
  * 4. Get current uthread from bundle[active]
  * 5. Toggle active index using XOR (0 <-> 1)
  * 6. Get next uthread from bundle[active]
- * 7. Perform context switch using __lame_jmp_thread_direct
- * 8. Restore volatile CPU state
- * 9. Return with iretq
+ * 7. Perform context switch using flattened __lame_jmp_thread_direct
+ * 8. jmp to new uthread
  * 
  * Key optimizations:
  * - No function calls (all logic inlined)
@@ -224,7 +223,7 @@ __lame_entry2:
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 
 #ifdef CONFIG_LAME_TSC
-	pushq	%rcx
+	pushq	%rcx 	/* save rcx; rdtscp clobbers rcx */
 	/* save end tsc, calculate elapsed tsc, and update bundle totals */
 	rdtscp
 	shlq	$32, %rdx
@@ -246,8 +245,37 @@ __lame_entry2:
 	/* Re-enable preemption after context switch is complete */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 
+#ifdef CONFIG_LAME_TSC
+	/* exit path for no switch; does not take part in TSC accounting */
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdi
+	popq	%rsi
+	popq	%rdx
+	popq	%rcx
+	popq	%rax
+
+	iretq
+#endif
+
 /* This point is reached when switching back to this thread */
 .lame_entry2_exit: 
+
+#ifdef CONFIG_LAME_TSC
+	/* catching the TSC accounting for the return path */
+	/* Save start TSC to rcx */
+	pushq	%rbx
+	xorq	%rax, %rax
+	cpuid
+	rdtsc
+	shlq	$32, %rdx
+	orq		%rdx, %rax
+	movq	%rax, %rcx 	/* RCX = start tsc */
+	popq	%rbx
+#endif
+
 	/* Restore volatile registers from stack */
 	popq	%r11
 	popq	%r10
@@ -255,6 +283,23 @@ __lame_entry2:
 	popq	%r8
 	popq	%rdi
 	popq	%rsi
+
+#ifdef CONFIG_LAME_TSC
+	pushq	%rcx
+	/* save end tsc, calculate elapsed tsc, and update bundle totals */
+	rdtscp
+	shlq	$32, %rdx
+	orq		%rdx, %rax			/* RAX = end_tsc */
+	popq	%rcx
+	subq	%rcx, %rax			/* RAX = delta */
+	addq	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_CYCLES(%r8)
+	/* do not increment total_lames; it's already incremented in the switch-to path */
+	pushq	%rbx
+	xorq	%rax, %rax
+	cpuid
+	popq	%rbx
+#endif
+
 	popq	%rdx
 	popq	%rcx
 	popq	%rax
