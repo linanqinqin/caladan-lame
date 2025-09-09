@@ -260,22 +260,22 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 		log_warn("WARNING: LAME capability not enabled");
 	}
 
-	/* tmp debug */
-	// log_info("LAME_BUNDLE_OFFSET: %lu", offsetof(struct kthread, lame_bundle));
-	// log_info("LAME_BUNDLE_UTHREADS: %lu", offsetof(struct lame_bundle, uthreads));
-	// log_info("LAME_BUNDLE_SIZE: %lu", offsetof(struct lame_bundle, size));
-	// log_info("LAME_BUNDLE_USED: %lu", offsetof(struct lame_bundle, used));
-	// log_info("LAME_BUNDLE_ACTIVE: %lu", offsetof(struct lame_bundle, active));
-	// log_info("LAME_BUNDLE_TOTAL_CYCLES: %lu", offsetof(struct lame_bundle, total_cycles));
-	// log_info("LAME_BUNDLE_TOTAL_LAMES: %lu", offsetof(struct lame_bundle, total_lames));
-	// log_info("LAME_BUNDLE_ENABLED: %lu", offsetof(struct lame_bundle, enabled));
-	// log_info("LAME_UTHREAD_WRAPPER_UTHREAD: %lu", offsetof(struct lame_uthread_wrapper, uthread));
-	// log_info("LAME_UTHREAD_WRAPPER_PRESENT: %lu", offsetof(struct lame_uthread_wrapper, present));
-	// log_info("LAME_UTHREAD_WRAPPER_CYCLES: %lu", offsetof(struct lame_uthread_wrapper, cycles));
-	// log_info("LAME_UTHREAD_WRAPPER_LAME_COUNT: %lu", offsetof(struct lame_uthread_wrapper, lame_count));
-	// log_info("LAME_UTHREAD_WRAPPER_SIZE: %lu", sizeof(struct lame_uthread_wrapper));
-	// log_info("THREAD_TF_OFFSET: %lu", offsetof(struct thread, tf));
-	/* end */
+#ifdef DEBUG
+	log_info("LAME_BUNDLE_OFFSET: %lu", offsetof(struct kthread, lame_bundle));
+	log_info("LAME_BUNDLE_UTHREADS: %lu", offsetof(struct lame_bundle, uthreads));
+	log_info("LAME_BUNDLE_SIZE: %lu", offsetof(struct lame_bundle, size));
+	log_info("LAME_BUNDLE_USED: %lu", offsetof(struct lame_bundle, used));
+	log_info("LAME_BUNDLE_ACTIVE: %lu", offsetof(struct lame_bundle, active));
+	log_info("LAME_BUNDLE_TOTAL_CYCLES: %lu", offsetof(struct lame_bundle, total_cycles));
+	log_info("LAME_BUNDLE_TOTAL_LAMES: %lu", offsetof(struct lame_bundle, total_lames));
+	log_info("LAME_BUNDLE_ENABLED: %lu", offsetof(struct lame_bundle, enabled));
+	log_info("LAME_UTHREAD_WRAPPER_UTHREAD: %lu", offsetof(struct lame_uthread_wrapper, uthread));
+	log_info("LAME_UTHREAD_WRAPPER_PRESENT: %lu", offsetof(struct lame_uthread_wrapper, present));
+	log_info("LAME_UTHREAD_WRAPPER_CYCLES: %lu", offsetof(struct lame_uthread_wrapper, cycles));
+	log_info("LAME_UTHREAD_WRAPPER_LAME_COUNT: %lu", offsetof(struct lame_uthread_wrapper, lame_count));
+	log_info("LAME_UTHREAD_WRAPPER_SIZE: %lu", sizeof(struct lame_uthread_wrapper));
+	log_info("THREAD_TF_OFFSET: %lu", offsetof(struct thread, tf));
+#endif
 	
 	log_info("process pid: %u", getpid());
 
