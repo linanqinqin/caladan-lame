@@ -276,6 +276,7 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	log_info("LAME_UTHREAD_WRAPPER_SIZE: %lu", sizeof(struct lame_uthread_wrapper));
 	log_info("THREAD_TF_OFFSET: %lu", offsetof(struct thread, tf));
 #endif
+	/* end */
 	
 	log_info("process pid: %u", getpid());
 
