@@ -568,7 +568,6 @@ __always_inline void lame_handle(void)
 		  myk_index(), cur_th);
 }
 
-#ifdef CONFIG_LAME_TSC
 void lame_print_tsc_counters(void)
 {
 	unsigned int i;
@@ -581,5 +580,4 @@ void lame_print_tsc_counters(void)
 				 k->lame_bundle.total_cycles, k->lame_bundle.total_lames);
 	}
 }
-#endif
 /* end */
