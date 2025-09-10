@@ -163,7 +163,7 @@ static int lame_init(void)
 		return lamedev;
     }
     else {
-		arg.is_present = 1;
+		arg.present = 1;
 		
 		if (cfg_lame_tsc != LAME_TSC_OFF) {
 			if (cfg_lame_bundle_size != 2) {
@@ -190,14 +190,14 @@ static int lame_init(void)
 			}
 		}
 		
-		arg.handler_stub_addr = (__u64)handler_addr;
+		arg.handler_addr = (__u64)handler_addr;
 		
 		ret = ioctl(lamedev, LAME_REGISTER, &arg);
 		if (ret < 0) {
 			log_err("[errno %d] ioctl LAME_REGISTER failed", errno);
 		} else {
 			log_info("LAME handler registered at %p (bundle size: %u)", 
-				(void *)arg.handler_stub_addr, cfg_lame_bundle_size);
+				(void *)arg.handler_addr, cfg_lame_bundle_size);
 		}
 		close(lamedev);
 	}
