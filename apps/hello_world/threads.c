@@ -13,6 +13,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <getopt.h>
+#include <x86intrin.h>  // For RDTSC
 
 #define NUM_THREADS_MAX 256
 #define MIN_MATRIX_SIZE 128
@@ -29,6 +30,9 @@ typedef struct {
     int *shared_counter;
     pthread_mutex_t *counter_mutex;
     int matrix_size;  // Each thread gets its own matrix size
+    int *total_lames;  // Shared counter for total LAME interrupts
+    unsigned long long *total_tsc_ticks;  // Shared counter for total TSC ticks
+    pthread_mutex_t *stats_mutex;  // Mutex for statistics
 } thread_args_t;
 
 // Function to generate a deterministic matrix A based on i,j indices
@@ -50,7 +54,7 @@ void generate_matrix_B(int *matrix, int size) {
 }
 
 // Function to perform matrix multiplication: C = A * B
-void matrix_multiply(int *A, int *B, int *C, int size) {
+void matrix_multiply(int *A, int *B, int *C, int size, int *lame_count, unsigned long long *tsc_ticks) {
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
             C[i * size + j] = 0;
@@ -61,7 +65,12 @@ void matrix_multiply(int *A, int *B, int *C, int size) {
             }
         }
         if (enable_lame) { // Only trigger LAME interrupt if enabled
+            unsigned long long tsc_before = __rdtsc();
             __asm__ volatile("int $0x1f"); // trigger LAME interrupt
+            unsigned long long tsc_after = __rdtsc();
+            
+            (*lame_count)++;
+            (*tsc_ticks) += (tsc_after - tsc_before);
         }
     }
 }
@@ -103,13 +112,15 @@ void *worker_thread(void *arg)
     
     printf("Thread %d: Starting %dx%d matrix multiplication...\n", thread_id, matrix_size, matrix_size);
     
-    // Perform matrix multiplication
-    matrix_multiply(A, B, C, matrix_size);
+    // Perform matrix multiplication with LAME measurement
+    int local_lame_count = 0;
+    unsigned long long local_tsc_ticks = 0;
+    matrix_multiply(A, B, C, matrix_size, &local_lame_count, &local_tsc_ticks);
     
     // Verify result (sum of all elements)
     long long result_sum = verify_matrix_multiply(A, B, C, matrix_size);
-    printf("Thread %d: Matrix multiplication completed. [thread_id=%d][size=%d][sum=%lld]\n", 
-           thread_id, thread_id, matrix_size, result_sum);
+    printf("Thread %d: Matrix multiplication completed. [thread_id=%d][size=%d][sum=%lld][lames=%d][tsc=%llu]\n", 
+           thread_id, thread_id, matrix_size, result_sum, local_lame_count, local_tsc_ticks);
     
     // Clean up
     free(A);
@@ -123,6 +134,12 @@ void *worker_thread(void *arg)
     tasks_completed++;  // Update global task counter
     pthread_mutex_unlock(args->counter_mutex);
     
+    // Update LAME statistics
+    pthread_mutex_lock(args->stats_mutex);
+    (*args->total_lames) += local_lame_count;
+    (*args->total_tsc_ticks) += local_tsc_ticks;
+    pthread_mutex_unlock(args->stats_mutex);
+    
     printf("Thread %d finished. Total completed: %d\n", thread_id, current_count);
     
     return NULL;
@@ -134,6 +151,9 @@ int main(int argc, char *argv[])
     thread_args_t *thread_args;
     int shared_counter = 0;
     pthread_mutex_t counter_mutex;
+    pthread_mutex_t stats_mutex;
+    int total_lames = 0;
+    unsigned long long total_tsc_ticks = 0;
     int i, ret;
     int thread_counter = 0;  // Global thread counter for unique IDs
     
@@ -194,9 +214,16 @@ int main(int argc, char *argv[])
         return 1;
     }
     
-    // Initialize mutex
+    // Initialize mutexes
     if (pthread_mutex_init(&counter_mutex, NULL) != 0) {
-        printf("Failed to initialize mutex\n");
+        printf("Failed to initialize counter mutex\n");
+        free(thread_args);
+        return 1;
+    }
+    
+    if (pthread_mutex_init(&stats_mutex, NULL) != 0) {
+        printf("Failed to initialize stats mutex\n");
+        pthread_mutex_destroy(&counter_mutex);
         free(thread_args);
         return 1;
     }
@@ -216,6 +243,18 @@ int main(int argc, char *argv[])
             
             printf("All tasks completed successfully!\n");
             printf("Final statistics: %d threads spawned, %d tasks completed\n", thread_counter, tasks_completed);
+            
+            // Print LAME statistics
+            if (enable_lame && total_lames > 0) {
+                printf("\n=== LAME Performance Statistics ===\n");
+                printf("Total LAME interrupts: %d\n", total_lames);
+                printf("Total TSC ticks for LAME overhead: %llu\n", total_tsc_ticks);
+                printf("Average TSC ticks per LAME: %.2f\n", (double)total_tsc_ticks / total_lames);
+                printf("LAME overhead percentage: %.4f%%\n", 
+                       (double)total_tsc_ticks / (total_tsc_ticks + (unsigned long long)thread_counter * 1000000) * 100);
+            } else if (enable_lame) {
+                printf("\nLAME was enabled but no interrupts were triggered.\n");
+            }
             break;
         }
         
@@ -242,6 +281,9 @@ int main(int argc, char *argv[])
             thread_args[i].thread_id = thread_counter++;
             thread_args[i].shared_counter = &shared_counter;
             thread_args[i].counter_mutex = &counter_mutex;
+            thread_args[i].total_lames = &total_lames;
+            thread_args[i].total_tsc_ticks = &total_tsc_ticks;
+            thread_args[i].stats_mutex = &stats_mutex;
             
             // Generate random matrix size for this thread
             thread_args[i].matrix_size = MIN_MATRIX_SIZE + (rand() % (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1));
@@ -263,6 +305,7 @@ int main(int argc, char *argv[])
     
     // Clean up (this will never be reached due to infinite loop)
     pthread_mutex_destroy(&counter_mutex);
+    pthread_mutex_destroy(&stats_mutex);
     free(thread_args);
     
     return 0;
