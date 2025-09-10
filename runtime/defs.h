@@ -480,9 +480,7 @@ extern void lame_bundle_set_ready_false_all(struct kthread *k);
 extern void lame_bundle_set_running_true_all(struct kthread *k);
 
 /* TSC accounting functions */
-#ifdef CONFIG_LAME_TSC
 extern void lame_print_tsc_counters(void);
-#endif
 
 /* LAME scheduling functions */
 extern thread_t *lame_sched_get_next_uthread(struct kthread *k);
