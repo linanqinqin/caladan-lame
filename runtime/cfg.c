@@ -254,12 +254,14 @@ static int parse_runtime_lame_bundle_size(const char *name, const char *val)
 
 static int parse_runtime_lame_tsc(const char *name, const char *val)
 {
-	if (!strcmp(val, "pretend") || !strcmp(val, "pt")) {
+	if (!strcmp(val, "pretend")) {
 		cfg_lame_tsc = LAME_TSC_PRETEND;
-	} else if (!strcmp(val, "nop") || !strcmp(val, "no")) {
+	} else if (!strcmp(val, "nop")) {
 		cfg_lame_tsc = LAME_TSC_NOP;
+	} else if (!strcmp(val, "off")) {
+		cfg_lame_tsc = LAME_TSC_OFF;
 	} else {
-		log_err("runtime_lame_tsc must be pretend(pt) or nop(no), got %s", val);
+		log_err("runtime_lame_tsc must be pretend, nop or off, got %s", val);
 		return -EINVAL;
 	}
 
