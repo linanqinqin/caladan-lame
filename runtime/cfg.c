@@ -24,6 +24,7 @@ int preferred_socket;
 /* LAME bundle size configuration */
 unsigned int cfg_lame_bundle_size = LAME_BUNDLE_SIZE_DEFAULT;
 unsigned int cfg_lame_tsc = LAME_TSC_OFF;
+unsigned int cfg_lame_register = RT_LAME_REGISTER_NONE;
 /* end */
 
 /*
@@ -264,6 +265,21 @@ static int parse_runtime_lame_tsc(const char *name, const char *val)
 
 	return 0;
 }
+
+static int parse_runtime_lame_register(const char *name, const char *val)
+{
+	if (!strcmp(val, "none")) {
+		cfg_lame_register = RT_LAME_REGISTER_NONE;
+	} else if (!strcmp(val, "int")) {
+		cfg_lame_register = RT_LAME_REGISTER_INT;
+	} else if (!strcmp(val, "pebs")) {
+		cfg_lame_register = RT_LAME_REGISTER_PEBS;
+	} else {
+		log_err("runtime_lame_register must be none, int, or pebs, got %s", val);
+		return -EINVAL;
+	}
+	return 0;
+}
 /* end */
 
 static int parse_mac_address(const char *name, const char *val)
@@ -436,6 +452,7 @@ static const struct cfg_handler cfg_handlers[] = {
 	/* linanqinqin */
 	{ "runtime_lame_bundle_size", parse_runtime_lame_bundle_size, false },
 	{ "runtime_lame_tsc", parse_runtime_lame_tsc, false },
+	{ "runtime_lame_register", parse_runtime_lame_register, false },
 	/* end */
 	{ "static_arp", parse_static_arp_entry, false },
 	{ "log_level", parse_log_level, false },

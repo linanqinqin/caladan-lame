@@ -106,6 +106,11 @@ extern void __lame_entry_nop();
 #define LAME_TSC_PRETEND		0x1
 #define LAME_TSC_NOP			0x2
 
+/* LAME register mode */
+#define RT_LAME_REGISTER_NONE		0x0
+#define RT_LAME_REGISTER_INT		0x1
+#define RT_LAME_REGISTER_PEBS		0x2
+
 /* uthread wrapper for bundle scheduling */
 struct lame_uthread_wrapper {
 	thread_t		*uthread;	/* pointer to the actual uthread */

@@ -17,6 +17,7 @@
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
 extern unsigned int cfg_lame_tsc;
+extern unsigned int cfg_lame_register;
 /* end */
 
 #include "defs.h"
@@ -156,6 +157,12 @@ static int lame_init(void)
 	struct lame_arg arg;
 	int ret;
 	void *handler_addr;
+	int register_mode;
+
+	if (cfg_lame_register == RT_LAME_REGISTER_NONE) {
+		log_warn("WARNING: LAME handler not registered");
+		return 0;
+	}
 
 	lamedev = open("/dev/lame", O_RDWR);
     if (lamedev < 0) {
@@ -191,13 +198,21 @@ static int lame_init(void)
 		}
 		
 		arg.handler_addr = (__u64)handler_addr;
+
+		/* select the register mode */
+		if (cfg_lame_register == RT_LAME_REGISTER_INT) {
+			register_mode = LAME_REGISTER_DIRECT;
+		} else {
+			register_mode = LAME_REGISTER;
+		}
 		
-		ret = ioctl(lamedev, LAME_REGISTER, &arg);
+		ret = ioctl(lamedev, register_mode, &arg);
 		if (ret < 0) {
 			log_err("[errno %d] ioctl LAME_REGISTER failed", errno);
 		} else {
-			log_info("LAME handler registered at %p (bundle size: %u)", 
-				(void *)arg.handler_addr, cfg_lame_bundle_size);
+			log_info("LAME handler registered at %p [bundle size: %u][mode: %s]", 
+				(void *)arg.handler_addr, cfg_lame_bundle_size, 
+				cfg_lame_register == RT_LAME_REGISTER_INT ? "int" : "pebs");
 		}
 		close(lamedev);
 	}
