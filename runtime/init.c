@@ -201,9 +201,9 @@ static int lame_init(void)
 
 		/* select the register mode */
 		if (cfg_lame_register == RT_LAME_REGISTER_INT) {
-			register_mode = LAME_REGISTER_DIRECT;
+			register_mode = LAME_REGISTER_INT;
 		} else {
-			register_mode = LAME_REGISTER;
+			register_mode = LAME_REGISTER_PEBS;
 		}
 		
 		ret = ioctl(lamedev, register_mode, &arg);
