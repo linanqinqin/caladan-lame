@@ -54,11 +54,19 @@ void generate_matrix_B(int *matrix, int size) {
 }
 
 // Function to perform matrix multiplication: C = A * B
+// Using worst possible memory access order (k-i-j) to maximize LLC cache misses
 void matrix_multiply(int *A, int *B, int *C, int size, int *lame_count, unsigned long long *tsc_ticks) {
+    // Initialize result matrix to zero
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
             C[i * size + j] = 0;
-            for (int k = 0; k < size; k++) {
+        }
+    }
+    
+    // Worst possible order: k-i-j (maximizes cache misses)
+    for (int k = 0; k < size; k++) {
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
                 // Use long long to prevent integer overflow
                 long long temp = (long long)A[i * size + k] * B[k * size + j];
                 C[i * size + j] += (int)(temp % 1000000); // Keep result manageable
