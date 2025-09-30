@@ -204,6 +204,8 @@ static int lame_init(void)
 			register_mode = LAME_REGISTER_INT;
 		} else {
 			register_mode = LAME_REGISTER_PEBS;
+			/* for debugging */
+			arg.handler_addr = (__u64)__lame_entry_ret;
 		}
 		
 		ret = ioctl(lamedev, register_mode, &arg);

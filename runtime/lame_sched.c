@@ -568,6 +568,12 @@ __always_inline void lame_handle(void)
 		  myk_index(), cur_th);
 }
 
+__always_inline void lame_handle_ret(uint64_t ret) {
+
+	log_warn("[LAME][func:lame_handle_ret] ret=0x%llx", ret);
+
+}
+
 void lame_print_tsc_counters(void)
 {
 	unsigned int i;

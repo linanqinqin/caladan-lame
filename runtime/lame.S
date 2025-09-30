@@ -72,7 +72,6 @@ __lame_jmp_thread_direct:
 .globl __lame_entry
 .type __lame_entry, @function
 __lame_entry:
-	/* linanqinqin */
 	/* Disable preemption to protect LAME context switch atomicity */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
@@ -452,3 +451,41 @@ __lame_entry2_pretend:
 
 	/* Return from LAME exception */
 	iretq
+
+
+/**
+ * __lame_entry_ret - LAME handler entry point that returns with ret
+ * 
+ */
+.align 16
+.globl __lame_entry_ret
+.type __lame_entry_ret, @function
+__lame_entry_ret:
+
+	/* Save volatile registers to stack */
+	pushq	%rax
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rsi
+	pushq	%rdi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+
+	movq	%rsp, %rdi
+	call	lame_handle_ret
+
+	/* Restore volatile registers from stack */
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdi
+	popq	%rsi
+	popq	%rdx
+	popq	%rcx
+	popq	%rax
+
+	/* Return from LAME exception */
+	retq
