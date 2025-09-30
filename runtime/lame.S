@@ -474,6 +474,7 @@ __lame_entry_ret:
 	pushq	%r11
 
 	movq	%rsp, %rdi
+	addq	$8*9, %rdi
 	call	lame_handle_ret
 
 	/* Restore volatile registers from stack */
