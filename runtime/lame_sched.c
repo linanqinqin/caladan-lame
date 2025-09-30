@@ -568,9 +568,9 @@ __always_inline void lame_handle(void)
 		  myk_index(), cur_th);
 }
 
-__always_inline void lame_handle_ret(uint64_t ret) {
+__always_inline void lame_handle_ret(uint64_t *ret) {
 
-	log_warn("[LAME][func:lame_handle_ret] ret=0x%lx", ret);
+	log_warn("[LAME][func:lame_handle_ret] ret=0x%lx", *ret);
 
 }
 
