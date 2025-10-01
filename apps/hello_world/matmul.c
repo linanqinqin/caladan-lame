@@ -10,9 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <signal.h>
+#include <stdbool.h>
 
 #define MAX_LINE_LENGTH 1024
-#define MAX_MATRIX_SIZE 1024
 
 // Function to generate a deterministic matrix A based on i,j indices
 void generate_matrix_A(int *matrix, int size) {
@@ -92,18 +93,84 @@ int parse_line(const char *line, int *thread_id, int *size, long long *reported_
     return 0;
 }
 
+static volatile sig_atomic_t g_interrupted = 0;
+
+static int g_total_results = 0;
+static int g_correct_results = 0;
+static int g_incorrect_results = 0;
+
+struct bad_result {
+    int thread_id;
+    int size;
+    long long reported_sum;
+    long long expected_sum;
+};
+
+static struct bad_result *g_bad = NULL;
+static int g_bad_cap = 0;
+static int g_bad_len = 0;
+
+static void ensure_bad_capacity(void) {
+    if (g_bad_len < g_bad_cap) return;
+    int new_cap = g_bad_cap == 0 ? 16 : g_bad_cap * 2;
+    struct bad_result *nb = realloc(g_bad, new_cap * sizeof(*nb));
+    if (!nb) return; // best-effort; if realloc fails, we just skip recording
+    g_bad = nb;
+    g_bad_cap = new_cap;
+}
+
+static void sigint_handler(int signo) {
+    (void)signo;
+    g_interrupted = 1;
+}
+
+static void print_summary(void) {
+    printf("==================================================\n");
+    printf("VERIFICATION SUMMARY\n");
+    printf("==================================================\n");
+
+    if (g_total_results == 0) {
+        printf("No matrix multiplication results found in input.\n");
+        printf("Expected format: [thread_id=X][size=Y][sum=Z]\n");
+        return;
+    }
+
+    printf("Total results found: %d\n", g_total_results);
+    printf("Correct results: %d\n", g_correct_results);
+    printf("Incorrect results: %d\n", g_incorrect_results);
+    printf("Accuracy: %.1f%%\n", g_total_results ? (double)g_correct_results / g_total_results * 100.0 : 0.0);
+
+    if (g_incorrect_results > 0) {
+        printf("\nIncorrect results (up to %d shown):\n", g_bad_len);
+        for (int i = 0; i < g_bad_len; i++) {
+            printf("  Thread %d: Size %dx%d, Reported %lld, Expected %lld, Diff %lld\n",
+                   g_bad[i].thread_id, g_bad[i].size, g_bad[i].size,
+                   g_bad[i].reported_sum, g_bad[i].expected_sum,
+                   g_bad[i].reported_sum - g_bad[i].expected_sum);
+        }
+    } else {
+        printf("\nAll results are correct!\n");
+    }
+}
+
 int main(int argc, char *argv[])
 {
     printf("Matrix Multiplication Verification Tool (C version)\n");
     printf("==================================================\n");
+
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = sigint_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, NULL);
     
     char line[MAX_LINE_LENGTH];
-    int total_results = 0;
-    int correct_results = 0;
-    int incorrect_results = 0;
     
     // Read from stdin line by line
     while (fgets(line, sizeof(line), stdin)) {
+        if (g_interrupted) break;
+
         int thread_id, size;
         long long reported_sum;
         
@@ -117,7 +184,7 @@ int main(int argc, char *argv[])
             
             if (expected_sum == -1) {
                 printf("  ERROR: Failed to verify computation\n\n");
-                incorrect_results++;
+                g_incorrect_results++;
             } else {
                 // Compare results
                 int is_correct = (reported_sum == expected_sum);
@@ -125,45 +192,31 @@ int main(int argc, char *argv[])
                 
                 printf("  Expected sum: %lld\n", expected_sum);
                 printf("  Status: %s\n", status);
-                // printf("  Difference: %lld\n", reported_sum - expected_sum);
                 printf("\n");
                 
                 if (is_correct) {
-                    correct_results++;
+                    g_correct_results++;
                 } else {
-                    incorrect_results++;
+                    g_incorrect_results++;
+                    ensure_bad_capacity();
+                    if (g_bad_len < g_bad_cap) {
+                        g_bad[g_bad_len].thread_id = thread_id;
+                        g_bad[g_bad_len].size = size;
+                        g_bad[g_bad_len].reported_sum = reported_sum;
+                        g_bad[g_bad_len].expected_sum = expected_sum;
+                        g_bad_len++;
+                    }
                 }
             }
             
-            total_results++;
+            g_total_results++;
         }
     }
     
     // Print verification summary
-    printf("==================================================\n");
-    printf("VERIFICATION SUMMARY\n");
-    printf("==================================================\n");
+    print_summary();
     
-    if (total_results == 0) {
-        printf("No matrix multiplication results found in input.\n");
-        printf("Expected format: [thread_id=X][size=Y][sum=Z]\n");
-        return 0;
-    }
-    
-    printf("Total results found: %d\n", total_results);
-    printf("Correct results: %d\n", correct_results);
-    printf("Incorrect results: %d\n", incorrect_results);
-    printf("Accuracy: %.1f%%\n", (double)correct_results / total_results * 100.0);
-    
-    if (incorrect_results > 0) {
-        printf("\nIncorrect results found!\n");
-    }
-    
-    if (correct_results == total_results) {
-        printf("\nAll results are correct!\n");
-    } else {
-        printf("\nFound %d incorrect result(s)\n", incorrect_results);
-    }
+    free(g_bad);
     
     return 0;
 }
