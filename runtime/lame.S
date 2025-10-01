@@ -479,7 +479,7 @@ __lame_entry_ret:
 	/* realign stack */
 	movq 	%rsp, %rax
 	andq	$15, %rax
-	cmpq 	$8, %rax
+	cmpq 	$0, %rax
 	je 	1f
 	subq	$8, %rsp
 	call	lame_handle_ret
