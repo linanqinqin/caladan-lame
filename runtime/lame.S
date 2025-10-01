@@ -461,6 +461,8 @@ __lame_entry2_pretend:
 .globl __lame_entry_ret
 .type __lame_entry_ret, @function
 __lame_entry_ret:
+	/* Disable preemption to protect LAME context switch atomicity */
+	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
 	/* Save volatile registers to stack */
 	pushq	%rax
