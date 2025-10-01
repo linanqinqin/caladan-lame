@@ -473,8 +473,9 @@ __lame_entry_ret:
 	pushq	%r10
 	pushq	%r11
 
-	movq	%rsp, %rdi
-	addq	$8*9, %rdi
+	/* set first argument to the top of the stack */
+	// movq	%rsp, %rdi
+	// addq	$8*9, %rdi
 
 	/* realign stack */
 	movq 	%rsp, %rax
@@ -482,12 +483,14 @@ __lame_entry_ret:
 	cmpq 	$0, %rax
 	je 	1f
 	subq	$8, %rsp
-	call	lame_handle_ret
+	// call	lame_handle_ret
+	call	lame_handle
 	addq	$8, %rsp
 	jmp	__lame_entry_ret_out
 
 1:
-	call	lame_handle_ret
+	// call	lame_handle_ret
+	call	lame_handle
 
 __lame_entry_ret_out:
 	/* Restore volatile registers from stack */
