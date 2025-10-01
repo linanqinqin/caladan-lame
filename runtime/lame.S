@@ -475,8 +475,21 @@ __lame_entry_ret:
 
 	movq	%rsp, %rdi
 	addq	$8*9, %rdi
+
+	/* realign stack */
+	movq 	%rsp, %rax
+	andq	$15, %rax
+	cmpq 	$8, %rax
+	je 	1f
+	subq	$8, %rsp
+	call	lame_handle_ret
+	addq	$8, %rsp
+	jmp	__lame_entry_ret_out
+
+1:
 	call	lame_handle_ret
 
+__lame_entry_ret_out:
 	/* Restore volatile registers from stack */
 	popq	%r11
 	popq	%r10
