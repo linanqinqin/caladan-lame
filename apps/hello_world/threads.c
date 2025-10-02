@@ -290,7 +290,6 @@ int main(int argc, char *argv[])
             
             // Wait for all remaining threads to complete
             while (shared_counter < thread_counter) {
-                printf("Waiting for %d threads to complete...\n", thread_counter - shared_counter);
                 usleep(100000);  // 100ms
             }
             
