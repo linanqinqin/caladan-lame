@@ -90,6 +90,7 @@ extern void __lame_jmp_thread_direct(struct thread_tf *oldtf,
 extern void __lame_entry2_pretend();
 extern void __lame_entry_nop();
 extern void __lame_entry_ret();
+extern void __lame_entry_stall_ret();
 /* end */
 
 /* linanqinqin */
@@ -111,6 +112,7 @@ extern void __lame_entry_ret();
 #define RT_LAME_REGISTER_NONE		0x0
 #define RT_LAME_REGISTER_INT		0x1
 #define RT_LAME_REGISTER_PEBS		0x2
+#define RT_LAME_REGISTER_STALL		0x3
 
 /* uthread wrapper for bundle scheduling */
 struct lame_uthread_wrapper {

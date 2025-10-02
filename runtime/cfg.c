@@ -25,6 +25,7 @@ int preferred_socket;
 unsigned int cfg_lame_bundle_size = LAME_BUNDLE_SIZE_DEFAULT;
 unsigned int cfg_lame_tsc = LAME_TSC_OFF;
 unsigned int cfg_lame_register = RT_LAME_REGISTER_NONE;
+unsigned int cfg_lame_stall_cycles = 0;
 /* end */
 
 /*
@@ -277,9 +278,15 @@ static int parse_runtime_lame_register(const char *name, const char *val)
 	} else if (!strcmp(val, "pebs")) {
 		cfg_lame_register = RT_LAME_REGISTER_PEBS;
 	} else {
-		log_err("runtime_lame_register must be none, int, or pebs, got %s", val);
-		return -EINVAL;
+		cfg_lame_register = RT_LAME_REGISTER_STALL;
+		cfg_lame_stall_cycles = atoi(val);
+
+		if (cfg_lame_stall_cycles <= 0) {
+			log_err("runtime_lame_register must be none, int, pebs, or a positive integer, got %s", val);
+			return -EINVAL;
+		}
 	}
+	
 	return 0;
 }
 /* end */

@@ -508,3 +508,46 @@ __lame_entry_ret_out:
 
 	/* Return from LAME exception */
 	retq
+
+
+/**
+ * __lame_entry_stall_ret - LAME handler entry point that emulates a CPU stall
+ * 
+ * This is used for the CXL baseline (longer memory loads, but no LAME switching)
+ */
+.align 16
+.globl __lame_entry_stall_ret
+.type __lame_entry_stall_ret, @function
+__lame_entry_stall_ret:
+	/* Disable preemption */
+	addl	$1, %gs:__perthread_preempt_cnt(%rip)
+
+	/* Save volatile registers to stack */
+	pushq	%rax
+	pushq	%rcx
+	pushq	%rdx
+
+	rdtsc
+	shlq	$32, %rdx
+	orq		%rdx, %rax /* rax = current tsc */
+	addq 	$800, %rax /* rax = deadline tsc */
+
+	/* Per WAITPKG/TPAUSE calling convention:
+     *  EAX = hint (0 = C0.1)
+     *  RCX:RDX = TSC deadline (low in RCX, high in RDX)
+	 */
+	movq    %rax, %rcx          /* RCX = low 64 (we'll split below) */
+	shrq    $32, %rax           /* RAX = high 32 of deadline */
+	movl    %eax, %edx          /* EDX = high 32 */
+	xorl    %eax, %eax          /* EAX = hint (0 = C0.1) */
+
+	tpause
+
+	/* Restore volatile registers from stack */
+	popq	%rdx
+	popq	%rcx
+	popq	%rax
+
+	/* Re-enable preemption */
+	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+	retq
