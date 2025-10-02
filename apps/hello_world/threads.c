@@ -36,6 +36,8 @@ typedef struct {
     int *total_lames;  // Shared counter for total LAME interrupts
     unsigned long long *total_tsc_ticks;  // Shared counter for total TSC ticks
     pthread_mutex_t *stats_mutex;  // Mutex for statistics
+    unsigned long long *total_duration_ns; // Sum of durations in ns (measure mode)
+    int *measured_tasks; // Number of measured tasks
 } thread_args_t;
 
 // Function to generate a deterministic matrix A based on i,j indices
@@ -143,8 +145,14 @@ void *worker_thread(void *arg)
         clock_gettime(CLOCK_MONOTONIC, &ts_end);
         long long dur_ns = (long long)(ts_end.tv_sec - ts_start.tv_sec) * 1000000000LL +
                            (long long)(ts_end.tv_nsec - ts_start.tv_nsec);
-        printf("Thread %d: MEASURE [size=%d] duration_ns=%lld lames=%d tsc=%llu\n",
-               thread_id, matrix_size, dur_ns, local_lame_count, local_tsc_ticks);
+        double dur_s = (double)dur_ns / 1e9;
+        printf("Thread %d: MEASURE [size=%d] duration_ns=%lld (%.6f s) lames=%d tsc=%llu\n",
+               thread_id, matrix_size, dur_ns, dur_s, local_lame_count, local_tsc_ticks);
+        // aggregate
+        pthread_mutex_lock(args->stats_mutex);
+        if (args->total_duration_ns) *args->total_duration_ns += (unsigned long long)dur_ns;
+        if (args->measured_tasks) (*args->measured_tasks)++;
+        pthread_mutex_unlock(args->stats_mutex);
     }
     
     // Verify result (sum of all elements)
@@ -185,6 +193,8 @@ int main(int argc, char *argv[])
     pthread_mutex_t stats_mutex;
     int total_lames = 0;
     unsigned long long total_tsc_ticks = 0;
+    unsigned long long total_duration_ns = 0;
+    int measured_tasks = 0;
     int i, ret;
     int thread_counter = 0;  // Global thread counter for unique IDs
     
@@ -298,6 +308,14 @@ int main(int argc, char *argv[])
             } else if (enable_lame) {
                 printf("\nLAME was enabled but no interrupts were triggered.\n");
             }
+            if (measure_mode && measured_tasks > 0) {
+                double total_s = (double)total_duration_ns / 1e9;
+                double avg_s = total_s / (double)measured_tasks;
+                printf("\n=== Measure Mode Summary ===\n");
+                printf("Measured tasks: %d\n", measured_tasks);
+                printf("Total duration: %.6f s\n", total_s);
+                printf("Average duration per task: %.6f s\n", avg_s);
+            }
             break;
         }
         
@@ -327,6 +345,8 @@ int main(int argc, char *argv[])
             thread_args[i].total_lames = &total_lames;
             thread_args[i].total_tsc_ticks = &total_tsc_ticks;
             thread_args[i].stats_mutex = &stats_mutex;
+            thread_args[i].total_duration_ns = &total_duration_ns;
+            thread_args[i].measured_tasks = &measured_tasks;
             
             // Determine matrix size
             if (measure_mode) {
