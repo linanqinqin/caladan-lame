@@ -16,8 +16,8 @@
 #include <x86intrin.h>  // For RDTSC
 
 #define NUM_THREADS_MAX 256
-#define MIN_MATRIX_SIZE 128
-#define MAX_MATRIX_SIZE 512
+#define MIN_MATRIX_SIZE 1024
+#define MAX_MATRIX_SIZE 2048
 
 // Global variables
 int enable_lame = 0;
