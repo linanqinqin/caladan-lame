@@ -24,6 +24,9 @@ int enable_lame = 0;
 int total_tasks = -1;  // -1 means infinite, otherwise total number of tasks to run
 int tasks_completed = 0;  // Counter for completed tasks
 
+// Enable per-task measurement mode (set by -m)
+static int measure_mode = 0;
+
 // Thread arguments structure
 typedef struct {
     int thread_id;
@@ -101,6 +104,11 @@ void *worker_thread(void *arg)
     
     printf("Hello from worker thread %d!\n", thread_id);
     
+    // Determine matrix size (force MAX_MATRIX_SIZE in measure mode)
+    if (measure_mode) {
+        matrix_size = MAX_MATRIX_SIZE;
+    }
+    
     // Perform matrix multiplication computation
     int *A = malloc(matrix_size * matrix_size * sizeof(int));
     int *B = malloc(matrix_size * matrix_size * sizeof(int));
@@ -118,16 +126,31 @@ void *worker_thread(void *arg)
     generate_matrix_A(A, matrix_size);
     generate_matrix_B(B, matrix_size);
     
-    printf("Thread %d: Starting %dx%d matrix multiplication...\n", thread_id, matrix_size, matrix_size);
+    if (!measure_mode)
+        printf("Thread %d: Starting %dx%d matrix multiplication...\n", thread_id, matrix_size, matrix_size);
+    
+    // Measurement
+    struct timespec ts_start, ts_end;
+    if (measure_mode)
+        clock_gettime(CLOCK_MONOTONIC, &ts_start);
     
     // Perform matrix multiplication with LAME measurement
     int local_lame_count = 0;
     unsigned long long local_tsc_ticks = 0;
     matrix_multiply(A, B, C, matrix_size, &local_lame_count, &local_tsc_ticks);
     
+    if (measure_mode) {
+        clock_gettime(CLOCK_MONOTONIC, &ts_end);
+        long long dur_ns = (long long)(ts_end.tv_sec - ts_start.tv_sec) * 1000000000LL +
+                           (long long)(ts_end.tv_nsec - ts_start.tv_nsec);
+        printf("Thread %d: MEASURE [size=%d] duration_ns=%lld lames=%d tsc=%llu\n",
+               thread_id, matrix_size, dur_ns, local_lame_count, local_tsc_ticks);
+    }
+    
     // Verify result (sum of all elements)
     long long result_sum = verify_matrix_multiply(A, B, C, matrix_size);
-    printf("Thread %d: Matrix multiplication completed. [thread_id=%d][size=%d][sum=%lld][lames=%d][tsc=%llu]\n", 
+    if (!measure_mode)
+        printf("Thread %d: Matrix multiplication completed. [thread_id=%d][size=%d][sum=%lld][lames=%d][tsc=%llu]\n", 
            thread_id, thread_id, matrix_size, result_sum, local_lame_count, local_tsc_ticks);
     
     // Clean up
@@ -171,7 +194,7 @@ int main(int argc, char *argv[])
     enable_lame = 0;  // Default value
     total_tasks = -1;  // Default to infinite
     
-    while ((opt = getopt(argc, argv, "w:lt:")) != -1) {
+    while ((opt = getopt(argc, argv, "w:lt:m")) != -1) {
         switch (opt) {
             case 'w':
                 num_threads = atoi(optarg);
@@ -190,13 +213,17 @@ int main(int argc, char *argv[])
                     return 1;
                 }
                 break;
+            case 'm':
+                measure_mode = 1;
+                break;
             default:
-                printf("Usage: %s [-w num_threads] [-l] [-t total_tasks]\n", argv[0]);
+                printf("Usage: %s [-w num_threads] [-l] [-t total_tasks] [-m]\n", argv[0]);
                 printf("  -w num_threads: Number of worker threads (default: 4)\n");
                 printf("  -l: Enable LAME interrupts (default: disabled)\n");
                 printf("  -t total_tasks: Total number of tasks to run (default: infinite)\n");
+                printf("  -m: Measure mode (per-task timing; suppress intra-task prints; use MAX_MATRIX_SIZE)\n");
                 printf("  Program runs continuously, spawning new threads as old ones finish\n");
-                printf("Example: %s -w 8 -l -t 100\n", argv[0]);
+                printf("Example: %s -w 8 -l -t 100 -m\n", argv[0]);
                 return 1;
         }
     }
@@ -212,6 +239,14 @@ int main(int argc, char *argv[])
         printf("Total tasks to run: %d\n", total_tasks);
     } else {
         printf("Running continuously - press Ctrl+C to stop\n");
+    }
+    
+    if (measure_mode) {
+        printf("\nMeasure mode enabled. Press Enter to start measurements...\n");
+        fflush(stdout);
+        int c;
+        // Consume until newline
+        while ((c = getchar()) != '\n' && c != EOF) {}
     }
     
     // Allocate array for thread arguments
@@ -293,9 +328,14 @@ int main(int argc, char *argv[])
             thread_args[i].total_tsc_ticks = &total_tsc_ticks;
             thread_args[i].stats_mutex = &stats_mutex;
             
-            // Generate random matrix size for this thread
-            thread_args[i].matrix_size = MIN_MATRIX_SIZE + (rand() % (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1));
-            printf("Spawning thread %d with matrix size: %dx%d\n", 
+            // Determine matrix size
+            if (measure_mode) {
+                thread_args[i].matrix_size = MAX_MATRIX_SIZE;
+            } else {
+                thread_args[i].matrix_size = MIN_MATRIX_SIZE + (rand() % (MAX_MATRIX_SIZE - MIN_MATRIX_SIZE + 1));
+            }
+            if (!measure_mode)
+                printf("Spawning thread %d with matrix size: %dx%d\n", 
                    thread_args[i].thread_id, thread_args[i].matrix_size, thread_args[i].matrix_size);
             
             ret = pthread_create(&temp_thread, NULL, worker_thread, &thread_args[i]);
