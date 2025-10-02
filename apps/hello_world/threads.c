@@ -285,8 +285,8 @@ int main(int argc, char *argv[])
     // Main continuous loop
     while (1) {
         // Check if we've reached the total task limit
-        if (total_tasks > 0 && tasks_completed >= total_tasks) {
-            printf("Reached total task limit (%d). Waiting for remaining threads to complete...\n", total_tasks);
+        if (total_tasks > 0 && thread_counter >= total_tasks) {
+            printf("Reached total task assignment (%d). Waiting for remaining threads to complete...\n", total_tasks);
             
             // Wait for all remaining threads to complete
             while (shared_counter < thread_counter) {
@@ -325,9 +325,10 @@ int main(int argc, char *argv[])
         
         // Don't spawn more threads if we're approaching the total task limit
         if (total_tasks > 0) {
-            int remaining_tasks = total_tasks - tasks_completed;
-            if (threads_to_spawn > remaining_tasks) {
-                threads_to_spawn = remaining_tasks;
+            int remaining_to_assign = total_tasks - thread_counter;
+            if (remaining_to_assign < 0) remaining_to_assign = 0;
+            if (threads_to_spawn > remaining_to_assign) {
+                threads_to_spawn = remaining_to_assign;
             }
         }
         
