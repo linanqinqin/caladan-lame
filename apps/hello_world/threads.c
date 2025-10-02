@@ -234,7 +234,7 @@ int main(int argc, char *argv[])
     printf("Hello, World from Caladan with POSIX threading!\n");
     printf("Spawning %d worker threads with random matrix sizes (%d-%d)...\n", 
            num_threads, MIN_MATRIX_SIZE, MAX_MATRIX_SIZE);
-    printf("LAME interrupts: %s\n", enable_lame ? "ENABLED" : "DISABLED");
+    printf("LAME interrupts via INT: %s\n", enable_lame ? "ENABLED" : "DISABLED");
     if (total_tasks > 0) {
         printf("Total tasks to run: %d\n", total_tasks);
     } else {
