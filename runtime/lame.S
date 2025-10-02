@@ -533,15 +533,14 @@ __lame_entry_stall_ret:
 	addq 	$800, %rax /* rax = deadline tsc */
 
 	/* Per WAITPKG/TPAUSE calling convention:
-     *  EAX = hint (0 = C0.1)
-     *  RCX:RDX = TSC deadline (low in RCX, high in RDX)
+     *  ECX = hint (0 = C0.1)
+     *  EDX:EAX = TSC deadline (low in EAX, high in EDX)
 	 */
-	movq    %rax, %rcx          /* RCX = low 64 (we'll split below) */
-	shrq    $32, %rax           /* RAX = high 32 of deadline */
-	movl    %eax, %edx          /* EDX = high 32 */
-	xorl    %eax, %eax          /* EAX = hint (0 = C0.1) */
+	movq    %rax, %rdx          /* EAX = low 32 */
+	shrq    $32, %rdx           /* EDX = high 32 */
+	xorl    %ecx, %ecx          /* EAX = hint (0 = C0.1) */
 
-	tpause
+	tpause 	%ecx
 
 	/* Restore volatile registers from stack */
 	popq	%rdx
