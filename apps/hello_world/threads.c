@@ -237,6 +237,8 @@ int main(int argc, char *argv[])
         int c;
         // Consume until newline
         while ((c = getchar()) != '\n' && c != EOF) {}
+        printf("Starting measurements...\n");
+        fflush(stdout);
     }
     
     // Allocate array for thread arguments
