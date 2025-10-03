@@ -326,8 +326,10 @@ int main(int argc, char *argv[])
         }
         
         if (threads_to_spawn > 0) {
-            printf("Threads spawned: %d, completed: %d, running: %d, need to spawn: %d\n", 
+            if (!measure_mode) {
+                printf("Threads spawned: %d, completed: %d, running: %d, need to spawn: %d\n", 
                    thread_counter, shared_counter, threads_running, threads_to_spawn);
+            }
         }
         
         // Spawn only the number of threads needed to maintain num_threads active
