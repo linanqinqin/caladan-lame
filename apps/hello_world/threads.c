@@ -26,6 +26,8 @@ int tasks_completed = 0;  // Counter for completed tasks
 
 // Enable per-task measurement mode (set by -m)
 static int measure_mode = 0;
+struct timespec measure_start_time; // Start time for measure mode
+struct timespec measure_end_time;   // End time for measure mode
 
 // Thread arguments structure
 typedef struct {
@@ -36,8 +38,6 @@ typedef struct {
     int *total_lames;  // Shared counter for total LAME interrupts
     unsigned long long *total_tsc_ticks;  // Shared counter for total TSC ticks
     pthread_mutex_t *stats_mutex;  // Mutex for statistics
-    unsigned long long *total_duration_ns; // Sum of durations in ns (measure mode)
-    int *measured_tasks; // Number of measured tasks
 } thread_args_t;
 
 // Function to generate a deterministic matrix A based on i,j indices
@@ -104,7 +104,8 @@ void *worker_thread(void *arg)
     int thread_id = args->thread_id;
     int matrix_size = args->matrix_size;
     
-    printf("Hello from worker thread %d!\n", thread_id);
+    if (!measure_mode)
+        printf("Hello from worker thread %d!\n", thread_id);
     
     // Determine matrix size (force MAX_MATRIX_SIZE in measure mode)
     if (measure_mode) {
@@ -131,29 +132,10 @@ void *worker_thread(void *arg)
     if (!measure_mode)
         printf("Thread %d: Starting %dx%d matrix multiplication...\n", thread_id, matrix_size, matrix_size);
     
-    // Measurement
-    struct timespec ts_start, ts_end;
-    if (measure_mode)
-        clock_gettime(CLOCK_MONOTONIC, &ts_start);
-    
     // Perform matrix multiplication with LAME measurement
     int local_lame_count = 0;
     unsigned long long local_tsc_ticks = 0;
     matrix_multiply(A, B, C, matrix_size, &local_lame_count, &local_tsc_ticks);
-    
-    if (measure_mode) {
-        clock_gettime(CLOCK_MONOTONIC, &ts_end);
-        long long dur_ns = (long long)(ts_end.tv_sec - ts_start.tv_sec) * 1000000000LL +
-                           (long long)(ts_end.tv_nsec - ts_start.tv_nsec);
-        double dur_s = (double)dur_ns / 1e9;
-        printf("Thread %d: MEASURE [size=%d] duration_ns=%lld (%.6f s) lames=%d tsc=%llu\n",
-               thread_id, matrix_size, dur_ns, dur_s, local_lame_count, local_tsc_ticks);
-        // aggregate
-        pthread_mutex_lock(args->stats_mutex);
-        if (args->total_duration_ns) *args->total_duration_ns += (unsigned long long)dur_ns;
-        if (args->measured_tasks) (*args->measured_tasks)++;
-        pthread_mutex_unlock(args->stats_mutex);
-    }
     
     // Verify result (sum of all elements)
     long long result_sum = verify_matrix_multiply(A, B, C, matrix_size);
@@ -193,8 +175,6 @@ int main(int argc, char *argv[])
     pthread_mutex_t stats_mutex;
     int total_lames = 0;
     unsigned long long total_tsc_ticks = 0;
-    unsigned long long total_duration_ns = 0;
-    int measured_tasks = 0;
     int i, ret;
     int thread_counter = 0;  // Global thread counter for unique IDs
     
@@ -282,19 +262,33 @@ int main(int argc, char *argv[])
     }
     
     
+    // Start timing for measure mode
+    if (measure_mode) {
+        clock_gettime(CLOCK_MONOTONIC, &measure_start_time);
+    }
+    
     // Main continuous loop
     while (1) {
         // Check if we've reached the total task limit
         if (total_tasks > 0 && thread_counter >= total_tasks) {
-            printf("Reached total task assignment (%d). Waiting for remaining threads to complete...\n", total_tasks);
+            if (!measure_mode) {
+                printf("Reached total task assignment (%d). Waiting for remaining threads to complete...\n", total_tasks);
+            }
             
             // Wait for all remaining threads to complete
             while (shared_counter < thread_counter) {
                 usleep(100000);  // 100ms
             }
             
-            printf("All tasks completed successfully!\n");
-            printf("Final statistics: %d threads spawned, %d tasks completed\n", thread_counter, tasks_completed);
+            if (!measure_mode) {
+                printf("All tasks completed successfully!\n");
+                printf("Final statistics: %d threads spawned, %d tasks completed\n", thread_counter, tasks_completed);
+            }
+            
+            // End timing for measure mode
+            if (measure_mode) {
+                clock_gettime(CLOCK_MONOTONIC, &measure_end_time);
+            }
             
             // Print LAME statistics
             if (enable_lame && total_lames > 0) {
@@ -307,13 +301,13 @@ int main(int argc, char *argv[])
             } else if (enable_lame) {
                 printf("\nLAME was enabled but no interrupts were triggered.\n");
             }
-            if (measure_mode && measured_tasks > 0) {
+            if (measure_mode) {
+                long long total_duration_ns = (long long)(measure_end_time.tv_sec - measure_start_time.tv_sec) * 1000000000LL +
+                                            (long long)(measure_end_time.tv_nsec - measure_start_time.tv_nsec);
                 double total_s = (double)total_duration_ns / 1e9;
-                double avg_s = total_s / (double)measured_tasks;
                 printf("\n=== Measure Mode Summary ===\n");
-                printf("Measured tasks: %d\n", measured_tasks);
-                printf("Total duration: %.6f s\n", total_s);
-                printf("Average duration per task: %.6f s\n", avg_s);
+                printf("Total tasks: %d\n", tasks_completed);
+                printf("End-to-end duration: %.6f s\n", total_s);
             }
             break;
         }
@@ -345,8 +339,6 @@ int main(int argc, char *argv[])
             thread_args[i].total_lames = &total_lames;
             thread_args[i].total_tsc_ticks = &total_tsc_ticks;
             thread_args[i].stats_mutex = &stats_mutex;
-            thread_args[i].total_duration_ns = &total_duration_ns;
-            thread_args[i].measured_tasks = &measured_tasks;
             
             // Determine matrix size
             if (measure_mode) {
