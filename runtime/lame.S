@@ -462,7 +462,10 @@ __lame_entry2_pretend:
 .type __lame_entry_ret, @function
 __lame_entry_ret:
 
-	/* check if preemption is already disabled. This usually indiates that a LAME handler is already running */
+	/* check if preemption is already disabled. This usually indiates that either:
+	 * 1. regular scheduling is happening
+	 * 2. a LAME handler is already running 
+	 */
 	cmpb	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
 	/* if preemption is already disabled, just return */
