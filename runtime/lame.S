@@ -461,6 +461,14 @@ __lame_entry2_pretend:
 .globl __lame_entry_ret
 .type __lame_entry_ret, @function
 __lame_entry_ret:
+
+	/* check if preemption is already disabled. This usually indiates that a LAME handler is already running */
+	cmpb	$0, %gs:__perthread_preempt_cnt(%rip)
+	je	1f
+	/* if preemption is already disabled, just return */
+	retq
+
+1:
 	/* Disable preemption to protect LAME context switch atomicity */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
@@ -483,14 +491,14 @@ __lame_entry_ret:
 	movq 	%rsp, %rax
 	andq	$15, %rax
 	cmpq 	$0, %rax
-	je 	1f
+	je 	2f
 	subq	$8, %rsp
 	// call	lame_handle_ret
 	call	lame_handle
 	addq	$8, %rsp
 	jmp	__lame_entry_ret_out
 
-1:
+2:
 	// call	lame_handle_ret
 	call	lame_handle
 
