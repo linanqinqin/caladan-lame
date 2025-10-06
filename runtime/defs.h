@@ -91,6 +91,7 @@ extern void __lame_entry2_pretend();
 extern void __lame_entry_nop();
 extern void __lame_entry_ret();
 extern void __lame_entry_stall_ret();
+extern void __lame_entry_nop_ret();
 /* end */
 
 /* linanqinqin */

@@ -59,7 +59,7 @@ __lame_jmp_thread_direct:
 	jmpq	*%r8
 
 /**
- * __lame_entry - LAME handler entry point
+ * __lame_entry - LAME handler entry point (via INT 0x1f)
  * 
  * This is the assembly entry point for LAME (Latency-Aware Memory Exception)
  * handling. It performs the following steps:
@@ -72,6 +72,9 @@ __lame_jmp_thread_direct:
 .globl __lame_entry
 .type __lame_entry, @function
 __lame_entry:
+
+	/* no need to check if preemption is already disabled, because INT 0x1f is never called in Caladan scheduler context */
+
 	/* Disable preemption to protect LAME context switch atomicity */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
@@ -104,7 +107,7 @@ __lame_entry:
 	iretq
 
 /**
- * __lame_entry2 - maximally optimized LAME handler for bundle size 2
+ * __lame_entry2 - maximally optimized LAME handler (via INT 0x1f) for bundle size 2
  * 
  * This is a flattened, branch-free assembly implementation specifically
  * optimized for bundle size 2. It performs the following steps:
@@ -128,6 +131,9 @@ __lame_entry:
 .globl __lame_entry2
 .type __lame_entry2, @function
 __lame_entry2:
+
+	/* no need to check if preemption is already disabled, because INT 0x1f is never called in Caladan scheduler context */
+
 	/* Disable preemption to protect LAME context switch atomicity */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
@@ -309,7 +315,7 @@ __lame_entry2:
 
 
 /**
- * __lame_entry_nop - LAME handler entry point with nop
+ * __lame_entry_nop - LAME handler entry point (via INT 0x1f) with nop
  * 
  * This handler simply does nothing and iretq
  * This is used for TSC measurement as the baseline
@@ -322,7 +328,7 @@ __lame_entry_nop:
 	iretq
 
 /**
- * __lame_entry2_pretend - LAME handler entry point for bundle size 2 with pretend context switch
+ * __lame_entry2_pretend - LAME handler entry point (via INT 0x1f) for bundle size 2 with pretend context switch
  * 
  * This handler does the necessary context switch logic for bundle size 2, 
  * but does not actually switch to the next uthread.
@@ -332,6 +338,9 @@ __lame_entry_nop:
 .globl __lame_entry2_pretend
 .type __lame_entry2_pretend, @function
 __lame_entry2_pretend:
+
+	/* no need to check if preemption is already disabled, because INT 0x1f is never called in Caladan scheduler context */
+
 	/* Disable preemption to protect LAME context switch atomicity */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
@@ -454,7 +463,7 @@ __lame_entry2_pretend:
 
 
 /**
- * __lame_entry_ret - LAME handler entry point that returns with ret
+ * __lame_entry_ret - LAME handler entry point (via PMI) that returns with ret
  * 
  */
 .align 16
@@ -522,7 +531,7 @@ __lame_entry_ret_out:
 
 
 /**
- * __lame_entry_stall_ret - LAME handler entry point that emulates a CPU stall
+ * __lame_entry_stall_ret - LAME handler entry point (via PMI) that emulates a CPU stall
  * 
  * This is used for the CXL baseline (longer memory loads, but no LAME switching)
  */
@@ -530,6 +539,9 @@ __lame_entry_ret_out:
 .globl __lame_entry_stall_ret
 .type __lame_entry_stall_ret, @function
 __lame_entry_stall_ret:
+	
+	/* no need to check if preemption is already disabled, because this does not perform a context switch */
+	
 	/* Disable preemption */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
@@ -561,3 +573,17 @@ __lame_entry_stall_ret:
 	/* Re-enable preemption */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 	retq
+
+/**
+ * __lame_entry_nop_ret - LAME handler entry point (via PMI) with nop
+ * 
+ * This handler simply does nothing and retq
+ * This is used for as the baseline without CXL emulation
+ */
+.align 16
+.globl __lame_entry_nop_ret
+.type __lame_entry_nop_ret, @function
+__lame_entry_nop_ret:
+
+	retq
+
