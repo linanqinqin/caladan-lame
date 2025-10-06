@@ -202,12 +202,12 @@ static int lame_init(void)
 		/* select the register mode */
 		if (cfg_lame_register == RT_LAME_REGISTER_INT) {
 			register_mode = LAME_REGISTER_INT;
-		} else if (cfg_lame_register == RT_LAME_REGISTER_PEBS) {
-			register_mode = LAME_REGISTER_PEBS;
+		} else if (cfg_lame_register == RT_LAME_REGISTER_PMU) {
+			register_mode = LAME_REGISTER_PMU;
 			/* for debugging */
 			arg.handler_addr = (__u64)__lame_entry_ret;
 		} else {
-			register_mode = LAME_REGISTER_PEBS; /* both pebs and stall use the same kernel register */
+			register_mode = LAME_REGISTER_PMU; /* both pmu and stall use the same kernel register */
 			arg.handler_addr = (__u64)__lame_entry_stall_ret;
 		}
 		
@@ -217,7 +217,7 @@ static int lame_init(void)
 		} else {
 			log_notice("LAME handler registered at %p [bundle size: %u][mode: %s]", 
 				(void *)arg.handler_addr, cfg_lame_bundle_size, 
-				cfg_lame_register == RT_LAME_REGISTER_INT ? "int" : (cfg_lame_register == RT_LAME_REGISTER_PEBS ? "pebs" : "stall"));
+				cfg_lame_register == RT_LAME_REGISTER_INT ? "int" : (cfg_lame_register == RT_LAME_REGISTER_PMU ? "pmu" : "stall"));
 		}
 		close(lamedev);
 	}

@@ -275,14 +275,14 @@ static int parse_runtime_lame_register(const char *name, const char *val)
 		cfg_lame_register = RT_LAME_REGISTER_NONE;
 	} else if (!strcmp(val, "int")) {
 		cfg_lame_register = RT_LAME_REGISTER_INT;
-	} else if (!strcmp(val, "pebs")) {
-		cfg_lame_register = RT_LAME_REGISTER_PEBS;
+	} else if (!strcmp(val, "pmu")) {
+		cfg_lame_register = RT_LAME_REGISTER_PMU;
 	} else {
 		cfg_lame_register = RT_LAME_REGISTER_STALL;
 		cfg_lame_stall_cycles = atoi(val);
 
 		if (cfg_lame_stall_cycles <= 0) {
-			log_err("runtime_lame_register must be none, int, pebs, or a positive integer, got %s", val);
+			log_err("runtime_lame_register must be none, int, pmu, or a positive integer, got %s", val);
 			return -EINVAL;
 		}
 	}

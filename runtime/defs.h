@@ -112,7 +112,7 @@ extern void __lame_entry_nop_ret();
 /* LAME register mode */
 #define RT_LAME_REGISTER_NONE		0x0
 #define RT_LAME_REGISTER_INT		0x1
-#define RT_LAME_REGISTER_PEBS		0x2
+#define RT_LAME_REGISTER_PMU		0x2
 #define RT_LAME_REGISTER_STALL		0x3
 
 /* uthread wrapper for bundle scheduling */
