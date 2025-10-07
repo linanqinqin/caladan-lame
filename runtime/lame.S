@@ -540,7 +540,16 @@ __lame_entry_ret_out:
 .type __lame_entry_stall_ret, @function
 __lame_entry_stall_ret:
 	
-	/* no need to check if preemption is already disabled, because this does not perform a context switch */
+	/* check if preemption is already disabled. This usually indiates that either:
+	 * 1. regular scheduling is happening
+	 * 2. a LAME handler is already running 
+	 */
+	cmpb	$0, %gs:__perthread_preempt_cnt(%rip)
+	je	1f
+	/* if preemption is already disabled, just return */
+	retq
+
+1:
 	
 	/* Disable preemption */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
