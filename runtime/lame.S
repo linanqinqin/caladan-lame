@@ -555,9 +555,9 @@ __lame_entry_stall_ret:
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
 	/* Save volatile registers to stack */
-	pushq	%rax
-	pushq	%rcx
-	pushq	%rdx
+	movq 	%rax, %gs:__perthread_lame_tf+RAX(%rip)
+	movq 	%rcx, %gs:__perthread_lame_tf+RCX(%rip)
+	movq 	%rdx, %gs:__perthread_lame_tf+RDX(%rip)
 
 	rdtsc
 	shlq	$32, %rdx
@@ -575,9 +575,9 @@ __lame_entry_stall_ret:
 	tpause 	%ecx
 
 	/* Restore volatile registers from stack */
-	popq	%rdx
-	popq	%rcx
-	popq	%rax
+	movq 	%rax, %gs:__perthread_lame_tf+RAX(%rip)
+	movq 	%rcx, %gs:__perthread_lame_tf+RCX(%rip)
+	movq 	%rdx, %gs:__perthread_lame_tf+RDX(%rip)
 
 	/* Re-enable preemption */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
