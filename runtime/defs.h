@@ -114,6 +114,7 @@ extern void __lame_entry_nop_ret();
 #define RT_LAME_REGISTER_INT		0x1
 #define RT_LAME_REGISTER_PMU		0x2
 #define RT_LAME_REGISTER_STALL		0x3
+#define RT_LAME_REGISTER_NOP		0x4
 
 /* uthread wrapper for bundle scheduling */
 struct lame_uthread_wrapper {
