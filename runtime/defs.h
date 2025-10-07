@@ -475,6 +475,9 @@ DECLARE_PERTHREAD(struct kthread *, mykthread);
 DECLARE_PERTHREAD(unsigned int, kthread_idx);
 
 /* linanqinqin */
+/* LAME stack page for handler use */
+DECLARE_PERTHREAD(struct thread_tf, lame_tf);
+
 /* LAME bundle management functions */
 extern void lame_bundle_init(struct kthread *k);
 extern void lame_bundle_cleanup(struct kthread *k);
