@@ -575,9 +575,9 @@ __lame_entry_stall_ret:
 	tpause 	%ecx
 
 	/* Restore volatile registers from stack */
-	movq 	%rax, %gs:__perthread_lame_tf+RAX(%rip)
-	movq 	%rcx, %gs:__perthread_lame_tf+RCX(%rip)
-	movq 	%rdx, %gs:__perthread_lame_tf+RDX(%rip)
+	movq 	%gs:__perthread_lame_tf+RAX(%rip), %rax
+	movq 	%gs:__perthread_lame_tf+RCX(%rip), %rcx
+	movq 	%gs:__perthread_lame_tf+RDX(%rip), %rdx
 
 	/* Re-enable preemption */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
