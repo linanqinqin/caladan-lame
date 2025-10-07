@@ -465,6 +465,7 @@ __lame_entry2_pretend:
 /**
  * __lame_entry_ret - LAME handler entry point (via PMI) that returns with ret
  * 
+ * this version is problematic due to user stack corruption by direct push/pop.
  */
 .align 16
 .globl __lame_entry_ret
