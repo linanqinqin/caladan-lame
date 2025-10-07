@@ -554,10 +554,14 @@ __lame_entry_stall_ret:
 	/* Disable preemption */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
-	/* Save volatile registers to stack */
-	movq 	%rax, %gs:__perthread_lame_rax(%rip)
-	movq 	%rcx, %gs:__perthread_lame_rcx(%rip)
-	movq 	%rdx, %gs:__perthread_lame_rdx(%rip)
+	/* save r8 to LAME scratch space; load mykthread into r8 */
+	movq	%r8, %gs:__perthread_lame_scratch(%rip)
+	movq	%gs:__perthread_mykthread(%rip), %r8
+
+	/* Save volatile registers to LAME trapframe */
+	movq 	%rax, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TF + RAX(%r8)
+	movq 	%rcx, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TF + RCX(%r8)
+	movq 	%rdx, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TF + RDX(%r8)
 
 	rdtsc
 	shlq	$32, %rdx
@@ -575,9 +579,12 @@ __lame_entry_stall_ret:
 	tpause 	%ecx
 
 	/* Restore volatile registers from stack */
-	movq 	%gs:__perthread_lame_rax(%rip), %rax
-	movq 	%gs:__perthread_lame_rcx(%rip), %rcx
-	movq 	%gs:__perthread_lame_rdx(%rip), %rdx
+	movq 	LAME_BUNDLE_OFFSET + LAME_BUNDLE_TF + RAX(%r8), %rax
+	movq 	LAME_BUNDLE_OFFSET + LAME_BUNDLE_TF + RCX(%r8), %rcx
+	movq 	LAME_BUNDLE_OFFSET + LAME_BUNDLE_TF + RDX(%r8), %rdx
+
+	/* restore r8 from LAME scratch space */
+	movq 	%gs:__perthread_lame_scratch(%rip), %r8
 
 	/* Re-enable preemption */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
