@@ -34,6 +34,7 @@
 #define LAME_BUNDLE_TOTAL_CYCLES    (272)   /* total cycles across all uthreads */
 #define LAME_BUNDLE_TOTAL_LAMES     (280)   /* total LAMEs handled */
 #define LAME_BUNDLE_ENABLED         (288)   /* dynamic runtime enable/disable flag */
+#define LAME_BUNDLE_TF              (296)   /* trapframe for LAME handler */
 
 /*
  * LAME Uthread Wrapper Structure Offsets

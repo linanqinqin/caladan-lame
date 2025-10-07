@@ -133,6 +133,8 @@ struct lame_bundle {
 	uint64_t			total_cycles;	/* total cycles across all uthreads */
 	uint64_t			total_lames;	/* total LAMEs handled */
 	bool				enabled;	/* dynamic runtime enable/disable flag */
+	bool				pad[7];		/* padding to align to 8-byte boundary */
+	struct thread_tf		tf;		/* trapframe for LAME handler */
 };
 
 /*
@@ -458,6 +460,7 @@ BUILD_ASSERT(LAME_BUNDLE_ACTIVE == offsetof(struct lame_bundle, active));
 BUILD_ASSERT(LAME_BUNDLE_TOTAL_CYCLES == offsetof(struct lame_bundle, total_cycles));
 BUILD_ASSERT(LAME_BUNDLE_TOTAL_LAMES == offsetof(struct lame_bundle, total_lames));
 BUILD_ASSERT(LAME_BUNDLE_ENABLED == offsetof(struct lame_bundle, enabled));
+BUILD_ASSERT(LAME_BUNDLE_TF == offsetof(struct lame_bundle, tf));
 
 /* Verify lame_uthread_wrapper structure offsets */
 BUILD_ASSERT(LAME_UTHREAD_WRAPPER_UTHREAD == offsetof(struct lame_uthread_wrapper, uthread));
@@ -480,6 +483,7 @@ DECLARE_PERTHREAD(struct thread_tf, lame_tf);
 DECLARE_PERTHREAD(uint64_t, lame_rax);
 DECLARE_PERTHREAD(uint64_t, lame_rcx);
 DECLARE_PERTHREAD(uint64_t, lame_rdx);
+DECLARE_PERTHREAD(uint64_t, lame_scratch);
 
 /* LAME bundle management functions */
 extern void lame_bundle_init(struct kthread *k);
