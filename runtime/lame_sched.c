@@ -12,6 +12,9 @@
 #include "defs.h"
 
 DEFINE_PERTHREAD(struct thread_tf, lame_tf);
+DEFINE_PERTHREAD(uint64_t, lame_rax);
+DEFINE_PERTHREAD(uint64_t, lame_rcx);
+DEFINE_PERTHREAD(uint64_t, lame_rdx);
 
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
