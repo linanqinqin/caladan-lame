@@ -120,6 +120,7 @@ extern void __lame_entry_nop_ret();
 struct lame_uthread_wrapper {
 	thread_t		*uthread;	/* pointer to the actual uthread */
 	bool			present;	/* whether this slot is occupied */
+	bool 			pad[7] 		/* padding to 8 bytes */
 	uint64_t		cycles;		/* accounting: cycles executed */
 	uint64_t		lame_count;	/* accounting: number of LAMEs handled */
 };
