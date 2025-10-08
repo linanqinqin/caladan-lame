@@ -691,7 +691,6 @@ __lame_entry_stall_ret:
 	retq
 
 1:
-	
 	/* Disable preemption */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
@@ -732,7 +731,7 @@ __lame_entry_stall_ret:
 
 	/* restore rflags */
 	popfq
-	
+
 	retq
 
 /**
