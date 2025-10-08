@@ -479,7 +479,7 @@ __lame_entry_ret:
 	 * 1. regular scheduling is happening
 	 * 2. a LAME handler is already running 
 	 */
-	cmpb	$0, %gs:__perthread_preempt_cnt(%rip)
+	cmpl	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
 	/* if preemption is already disabled, just return */
 	popfq
@@ -535,7 +535,7 @@ __lame_entry_ret_out:
 	popq	%r12
 	popq	%rbp
 	popq	%rbx
-	
+
 	/* Restore volatile registers from stack */
 	popq	%r11
 	popq	%r10
@@ -573,7 +573,7 @@ __lame_entry2_ret:
 	 * 1. regular scheduling is happening
 	 * 2. a LAME handler is already running 
 	 */
-	cmpb	$0, %gs:__perthread_preempt_cnt(%rip)
+	cmpl	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
 	/* if preemption is already disabled, just return */
 	popfq
@@ -714,7 +714,7 @@ __lame_entry_stall_ret:
 	 * 1. regular scheduling is happening
 	 * 2. a LAME handler is already running 
 	 */
-	cmpb	$0, %gs:__perthread_preempt_cnt(%rip)
+	cmpl	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
 	/* if preemption is already disabled, just return */
 	popfq
