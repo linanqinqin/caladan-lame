@@ -34,6 +34,9 @@
 /* special-purpose registers */
 #define RAX     (112)   /* return code */
 #define RIP     (144)   /* instruction pointer */
+/* linanqinqin */
+#define RFLAGS  (152)   /* flags */
+/* end */
 #define RSP     (160)   /* stack pointer */
 #define ORIG_RAX (128)
 
@@ -95,6 +98,9 @@ BUILD_ASSERT(R15 == offsetof(struct thread_tf, r15));
 BUILD_ASSERT(RAX == offsetof(struct thread_tf, rax));
 BUILD_ASSERT(ORIG_RAX == offsetof(struct thread_tf, orig_rax));
 BUILD_ASSERT(RIP == offsetof(struct thread_tf, rip));
+/* linanqinqin */
+BUILD_ASSERT(RFLAGS == offsetof(struct thread_tf, rflags));
+/* end */
 BUILD_ASSERT(RSP == offsetof(struct thread_tf, rsp));
 
 
