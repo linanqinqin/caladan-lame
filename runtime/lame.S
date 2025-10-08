@@ -677,6 +677,9 @@ __lame_entry2_ret:
 .type __lame_entry_stall_ret, @function
 __lame_entry_stall_ret:
 	
+	/* save rflags */
+	pushfq
+
 	/* check if preemption is already disabled. This usually indiates that either:
 	 * 1. regular scheduling is happening
 	 * 2. a LAME handler is already running 
@@ -684,6 +687,7 @@ __lame_entry_stall_ret:
 	cmpb	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
 	/* if preemption is already disabled, just return */
+	popfq
 	retq
 
 1:
@@ -725,6 +729,10 @@ __lame_entry_stall_ret:
 
 	/* Re-enable preemption */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+
+	/* restore rflags */
+	popfq
+	
 	retq
 
 /**
