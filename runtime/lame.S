@@ -543,6 +543,9 @@ __lame_entry_ret_out:
 .type __lame_entry2_ret, @function
 __lame_entry2_ret:
 
+	/* save rflags */
+	pushfq
+
 	/* check if preemption is already disabled. This usually indiates that either:
 	 * 1. regular scheduling is happening
 	 * 2. a LAME handler is already running 
@@ -550,6 +553,7 @@ __lame_entry2_ret:
 	cmpb	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
 	/* if preemption is already disabled, just return */
+	popfq
 	retq
 
 1:
@@ -613,6 +617,8 @@ __lame_entry2_ret:
 	leaq	.lame_entry2_ret_exit(%rip), %r9	/* Get address of exit label */
 	movq	%r9, THREAD_TF_OFFSET + RIP(%r10)	/* Save RIP to current tf */
 	movq	%rsp, THREAD_TF_OFFSET + RSP(%r10)	/* Save current RSP to current tf */
+	popq 	%rax /* pop rflags */
+	movq	%rax, THREAD_TF_OFFSET + RFLAGS(%r10) /* save rflags to current tf */
 
 	/* Save callee-saved registers to current thread's trapframe */
 	movq	%rbx, THREAD_TF_OFFSET + RBX(%r10)
@@ -641,12 +647,20 @@ __lame_entry2_ret:
 	/* Re-enable preemption after context switch is complete */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 
+	/* restore rflags */
+	movq 	THREAD_TF_OFFSET + RFLAGS(%r11), %rax /* get rflags from next tf */
+	pushq	%rax /* push rflags */
+	popfq
+
 	/* Jump into next thread's trapframe */
 	jmpq	*%r9
 
 .lame_entry2_ret_noswitch:
 	/* Re-enable preemption after context switch is complete */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+	
+	/* restore rflags */
+	popfq
 
 /* This point is reached when switching back to this thread */
 .lame_entry2_ret_exit: 
