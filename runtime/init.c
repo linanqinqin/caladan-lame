@@ -200,15 +200,23 @@ static int lame_init(void)
 		arg.handler_addr = (__u64)handler_addr;
 
 		/* select the register mode */
+		/* via INT*/
 		if (cfg_lame_register == RT_LAME_REGISTER_INT) {
 			register_mode = LAME_REGISTER_INT;
+		/* via PMU, with LAME switching */
 		} else if (cfg_lame_register == RT_LAME_REGISTER_PMU) {
 			register_mode = LAME_REGISTER_PMU;
-			/* for debugging */
-			arg.handler_addr = (__u64)__lame_entry_ret;
+			
+			if (cfg_lame_bundle_size == 2) {
+				arg.handler_addr = (__u64)__lame_entry2_ret;
+			} else {
+				arg.handler_addr = (__u64)__lame_entry_ret;
+			}
+		/* via PMU, with stall emulation */
 		} else if (cfg_lame_register == RT_LAME_REGISTER_STALL) {
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
 			arg.handler_addr = (__u64)__lame_entry_stall_ret;
+		/* via PMU, with nop */
 		} else {
 			/* nop */
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
