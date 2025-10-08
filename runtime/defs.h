@@ -134,12 +134,6 @@ struct lame_bundle {
 	uint64_t			total_lames;	/* total LAMEs handled */
 	bool				enabled;	/* dynamic runtime enable/disable flag */
 	bool				pad[7];		/* padding to align to 8-byte boundary */
-	
-	/* this is a per-kthread, dedicated space for register save/restore in PMU-triggered LAME handling.
-	 * direct manipulation on the user stack is dangerous in NMI context.
-	 * similar to the Linux kernel using IST for NMI handling.
-	 */
-	struct thread_tf		tf;		/* trapframe for LAME handler */
 };
 
 /*
