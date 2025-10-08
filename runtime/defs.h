@@ -459,7 +459,6 @@ BUILD_ASSERT(LAME_BUNDLE_ACTIVE == offsetof(struct lame_bundle, active));
 BUILD_ASSERT(LAME_BUNDLE_TOTAL_CYCLES == offsetof(struct lame_bundle, total_cycles));
 BUILD_ASSERT(LAME_BUNDLE_TOTAL_LAMES == offsetof(struct lame_bundle, total_lames));
 BUILD_ASSERT(LAME_BUNDLE_ENABLED == offsetof(struct lame_bundle, enabled));
-BUILD_ASSERT(LAME_BUNDLE_TF == offsetof(struct lame_bundle, tf));
 
 /* Verify lame_uthread_wrapper structure offsets */
 BUILD_ASSERT(LAME_UTHREAD_WRAPPER_UTHREAD == offsetof(struct lame_uthread_wrapper, uthread));
