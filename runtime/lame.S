@@ -500,6 +500,14 @@ __lame_entry_ret:
 	pushq	%r10
 	pushq	%r11
 
+	/* save callee-saved registers to stack */
+	pushq	%rbx
+	pushq	%rbp
+	pushq	%r12
+	pushq	%r13
+	pushq	%r14
+	pushq	%r15
+
 	/* set first argument to the top of the stack */
 	// movq	%rsp, %rdi
 	// addq	$8*9, %rdi
@@ -520,6 +528,14 @@ __lame_entry_ret:
 	call	lame_handle
 
 __lame_entry_ret_out:
+	/* restore callee-saved registers from stack */
+	popq	%r15
+	popq	%r14
+	popq	%r13
+	popq	%r12
+	popq	%rbp
+	popq	%rbx
+	
 	/* Restore volatile registers from stack */
 	popq	%r11
 	popq	%r10
