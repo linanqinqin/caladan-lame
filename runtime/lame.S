@@ -624,8 +624,6 @@ __lame_entry2_ret:
 	leaq	.lame_entry2_ret_exit(%rip), %r9	/* Get address of exit label */
 	movq	%r9, THREAD_TF_OFFSET + RIP(%r10)	/* Save RIP to current tf */
 	movq	%rsp, THREAD_TF_OFFSET + RSP(%r10)	/* Save current RSP to current tf */
-	popq 	%rax /* pop rflags */
-	movq	%rax, THREAD_TF_OFFSET + RFLAGS(%r10) /* save rflags to current tf */
 
 	/* Save callee-saved registers to current thread's trapframe */
 	movq	%rbx, THREAD_TF_OFFSET + RBX(%r10)
@@ -654,20 +652,12 @@ __lame_entry2_ret:
 	/* Re-enable preemption after context switch is complete */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 
-	/* restore rflags */
-	movq 	THREAD_TF_OFFSET + RFLAGS(%r11), %rax /* get rflags from next tf */
-	pushq	%rax /* push rflags */
-	popfq
-
 	/* Jump into next thread's trapframe */
 	jmpq	*%r9
 
 .lame_entry2_ret_noswitch:
 	/* Re-enable preemption after context switch is complete */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
-	
-	/* restore rflags */
-	popfq
 
 /* This point is reached when switching back to this thread */
 .lame_entry2_ret_exit: 
@@ -683,6 +673,9 @@ __lame_entry2_ret:
 	movq 	THREAD_TF_OFFSET + R10(%rax), %r10
 	movq 	THREAD_TF_OFFSET + R11(%rax), %r11
 	movq 	THREAD_TF_OFFSET + RAX(%rax), %rax
+
+	/* restore rflags */
+	popfq
 
 	/* Return from LAME exception */
 	retq
