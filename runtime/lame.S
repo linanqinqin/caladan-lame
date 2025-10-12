@@ -472,9 +472,6 @@ __lame_entry2_pretend:
 .type __lame_entry_ret, @function
 __lame_entry_ret:
 
-	/* save rflags */
-	pushfq
-
 	/* check if preemption is already disabled. This usually indiates that either:
 	 * 1. regular scheduling is happening
 	 * 2. a LAME handler is already running 
@@ -482,8 +479,7 @@ __lame_entry_ret:
 	cmpl	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
 	/* if preemption is already disabled, just return */
-	popfq
-	retq
+	bretq
 
 1:
 	/* Disable preemption to protect LAME context switch atomicity */
@@ -532,11 +528,8 @@ __lame_entry_ret_out:
 	popq	%rcx
 	popq	%rax
 
-	/* restore rflags */
-	popfq
-
-	/* Return from LAME exception */
-	retq
+	/* Return from LAME */
+	bretq
 
 
 /**
@@ -551,9 +544,6 @@ __lame_entry_ret_out:
 .type __lame_entry2_ret, @function
 __lame_entry2_ret:
 
-	/* save rflags */
-	pushfq
-
 	/* check if preemption is already disabled. This usually indiates that either:
 	 * 1. regular scheduling is happening
 	 * 2. a LAME handler is already running 
@@ -561,8 +551,7 @@ __lame_entry2_ret:
 	cmpl	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
 	/* if preemption is already disabled, just return */
-	popfq
-	retq
+	bretq
 
 1:
 	/* Disable preemption to protect LAME context switch atomicity */
@@ -675,11 +664,8 @@ __lame_entry2_ret:
 	movq 	THREAD_TF_OFFSET + R11(%rax), %r11
 	movq 	THREAD_TF_OFFSET + RAX(%rax), %rax
 
-	/* restore rflags */
-	popfq
-
-	/* Return from LAME exception */
-	retq
+	/* Return from LAME */
+	bretq
 
 
 /**
@@ -692,9 +678,6 @@ __lame_entry2_ret:
 .type __lame_entry_stall_ret, @function
 __lame_entry_stall_ret:
 	
-	/* save rflags */
-	pushfq
-
 	/* check if preemption is already disabled. This usually indiates that either:
 	 * 1. regular scheduling is happening
 	 * 2. a LAME handler is already running 
@@ -702,8 +685,7 @@ __lame_entry_stall_ret:
 	cmpl	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
 	/* if preemption is already disabled, just return */
-	popfq
-	retq
+	bretq
 
 1:
 	/* Disable preemption */
@@ -744,15 +726,14 @@ __lame_entry_stall_ret:
 	/* Re-enable preemption */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 
-	/* restore rflags */
-	popfq
+	/* Return from LAME */
+	bretq
 
-	retq
 
 /**
  * __lame_entry_nop_ret - LAME handler entry point (via PMI) with nop
  * 
- * This handler simply does nothing and retq
+ * This handler simply does nothing and bretq
  * This is used for as the baseline without CXL emulation
  */
 .align 16
@@ -760,5 +741,5 @@ __lame_entry_stall_ret:
 .type __lame_entry_nop_ret, @function
 __lame_entry_nop_ret:
 
-	retq
+	bretq
 

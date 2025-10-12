@@ -70,3 +70,11 @@
  */
 
 #define THREAD_TF_OFFSET            (0)      /* offset of tf in thread_t */
+
+/* 
+ * bretq - return from a LAME 
+ */
+.macro bretq
+    popfq
+    retq
+.endm
