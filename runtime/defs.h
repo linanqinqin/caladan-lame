@@ -89,10 +89,11 @@ extern void __lame_jmp_thread_direct(struct thread_tf *oldtf,
 				    struct thread_tf *newtf);
 extern void __lame_entry2_pretend();
 extern void __lame_entry_nop();
-extern void __lame_entry_ret();
-extern void __lame_entry2_ret();
-extern void __lame_entry_stall_ret();
-extern void __lame_entry_nop_ret();
+
+extern void __lame_entry_bret();
+extern void __lame_entry2_bret();
+extern void __lame_entry_stall_bret();
+extern void __lame_entry_nop_bret();
 /* end */
 
 /* linanqinqin */

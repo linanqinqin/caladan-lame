@@ -208,19 +208,19 @@ static int lame_init(void)
 			register_mode = LAME_REGISTER_PMU;
 			
 			if (cfg_lame_bundle_size == 2) {
-				arg.handler_addr = (__u64)__lame_entry2_ret;
+				arg.handler_addr = (__u64)__lame_entry2_bret;
 			} else {
-				arg.handler_addr = (__u64)__lame_entry_ret;
+				arg.handler_addr = (__u64)__lame_entry_bret;
 			}
 		/* via PMU, with stall emulation */
 		} else if (cfg_lame_register == RT_LAME_REGISTER_STALL) {
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
-			arg.handler_addr = (__u64)__lame_entry_stall_ret;
+			arg.handler_addr = (__u64)__lame_entry_stall_bret;
 		/* via PMU, with nop */
 		} else {
 			/* nop */
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
-			arg.handler_addr = (__u64)__lame_entry_nop_ret;
+			arg.handler_addr = (__u64)__lame_entry_nop_bret;
 		}
 		
 		ret = ioctl(lamedev, register_mode, &arg);

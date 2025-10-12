@@ -471,14 +471,14 @@ __lame_entry2_pretend:
 
 
 /**
- * __lame_entry_ret - LAME handler entry point (via PMI) that returns with ret
+ * __lame_entry_bret - LAME handler entry point (via PMI) that returns with ret
  * 
  * this version is problematic due to user stack corruption by direct push/pop.
  */
 .align 16
-.globl __lame_entry_ret
-.type __lame_entry_ret, @function
-__lame_entry_ret:
+.globl __lame_entry_bret
+.type __lame_entry_bret, @function
+__lame_entry_bret:
 
 	/* check if preemption is already disabled. This usually indiates that either:
 	 * 1. regular scheduling is happening
@@ -514,16 +514,16 @@ __lame_entry_ret:
 	cmpq 	$0, %rax
 	je 	2f
 	subq	$8, %rsp
-	// call	lame_handle_ret
+	// call	lame_handle_bret
 	call	lame_handle
 	addq	$8, %rsp
-	jmp	__lame_entry_ret_out
+	jmp	__lame_entry_bret_out
 
 2:
-	// call	lame_handle_ret
+	// call	lame_handle_bret
 	call	lame_handle
 
-__lame_entry_ret_out:
+__lame_entry_bret_out:
 
 	/* Restore volatile registers from stack */
 	popq	%r11
@@ -541,16 +541,16 @@ __lame_entry_ret_out:
 
 
 /**
- * __lame_entry2_ret - optimized LAME handler (via PMU) that returns with ret, for bundle size 2
+ * __lame_entry2_bret - optimized LAME handler (via PMU) that returns with ret, for bundle size 2
  *
  * the handler does not touch the stack, since a PMI could arrive at arbitrary point in the code
  * with a stack pointer floating on the red zone. direct push/pop on the stack can corrupt the user program. 
  * instead, we use a gs scratch space and thread_t's trapframe.
  */
 .align 16
-.globl __lame_entry2_ret
-.type __lame_entry2_ret, @function
-__lame_entry2_ret:
+.globl __lame_entry2_bret
+.type __lame_entry2_bret, @function
+__lame_entry2_bret:
 
 	/* check if preemption is already disabled. This usually indiates that either:
 	 * 1. regular scheduling is happening
@@ -590,11 +590,11 @@ __lame_entry2_ret:
 	/* Check if LAME scheduling is enabled (branch-free) */
 	movb	LAME_BUNDLE_OFFSET + LAME_BUNDLE_ENABLED(%r8), %al	/* bundle.enabled */
 	testb	%al, %al
-	jz	.lame_entry2_ret_noswitch	/* Exit if disabled */
+	jz	.lame_entry2_bret_noswitch	/* Exit if disabled */
 
 	/* Check if bundle has exactly 2 uthreads (used == 2) */
 	cmpl	$2, LAME_BUNDLE_OFFSET + LAME_BUNDLE_USED(%r8)	/* bundle.used */
-	jne	.lame_entry2_ret_noswitch	/* Exit if not exactly 2 (this means there is only one uthread in the bundle, thus no switching needed) */
+	jne	.lame_entry2_bret_noswitch	/* Exit if not exactly 2 (this means there is only one uthread in the bundle, thus no switching needed) */
 
 	/* Get current active index */
 	movl	LAME_BUNDLE_OFFSET + LAME_BUNDLE_ACTIVE(%r8), %eax	/* bundle.active */
@@ -619,7 +619,7 @@ __lame_entry2_ret:
 	/* Flattened context switch - save current thread state */
 	/* Save IP and stack pointer to current thread's trapframe */
 	/* IP should point to .lame_entry2_exit for when we return to this thread */
-	leaq	.lame_entry2_ret_exit(%rip), %r9	/* Get address of exit label */
+	leaq	.lame_entry2_bret_exit(%rip), %r9	/* Get address of exit label */
 	movq	%r9, THREAD_TF_OFFSET + RIP(%r10)	/* Save RIP to current tf */
 	movq	%rsp, THREAD_TF_OFFSET + RSP(%r10)	/* Save current RSP to current tf */
 
@@ -653,12 +653,12 @@ __lame_entry2_ret:
 	/* Jump into next thread's trapframe */
 	jmpq	*%r9
 
-.lame_entry2_ret_noswitch:
+.lame_entry2_bret_noswitch:
 	/* Re-enable preemption after context switch is complete */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
 
 /* This point is reached when switching back to this thread */
-.lame_entry2_ret_exit: 
+.lame_entry2_bret_exit: 
 
 	/* restore volatile regs from __self's trapframe; follow the order in thread_tf */
 	movq	%gs:__perthread___self(%rip), %rax
@@ -677,14 +677,14 @@ __lame_entry2_ret:
 
 
 /**
- * __lame_entry_stall_ret - LAME handler entry point (via PMI) that emulates a CPU stall
+ * __lame_entry_stall_bret - LAME handler entry point (via PMI) that emulates a CPU stall
  * 
  * This is used for the CXL baseline (longer memory loads, but no LAME switching)
  */
 .align 16
-.globl __lame_entry_stall_ret
-.type __lame_entry_stall_ret, @function
-__lame_entry_stall_ret:
+.globl __lame_entry_stall_bret
+.type __lame_entry_stall_bret, @function
+__lame_entry_stall_bret:
 	
 	/* check if preemption is already disabled. This usually indiates that either:
 	 * 1. regular scheduling is happening
@@ -739,15 +739,15 @@ __lame_entry_stall_ret:
 
 
 /**
- * __lame_entry_nop_ret - LAME handler entry point (via PMI) with nop
+ * __lame_entry_nop_bret - LAME handler entry point (via PMI) with nop
  * 
  * This handler simply does nothing and bretq
  * This is used for as the baseline without CXL emulation
  */
 .align 16
-.globl __lame_entry_nop_ret
-.type __lame_entry_nop_ret, @function
-__lame_entry_nop_ret:
+.globl __lame_entry_nop_bret
+.type __lame_entry_nop_bret, @function
+__lame_entry_nop_bret:
 
 	bretq
 
