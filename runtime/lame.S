@@ -9,6 +9,14 @@
 .section        .note.GNU-stack,"",@progbits
 .text
 
+/* 
+ * bretq - return from a LAME 
+ */
+.macro bretq
+    popfq
+    retq
+.endm
+
 /**
  * __lame_jmp_thread_direct - LAME-specific context switch without preemption
  * @oldtf: the trap frame to save (%rdi)
