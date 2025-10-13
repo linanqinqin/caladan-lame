@@ -572,7 +572,7 @@ __always_inline void lame_handle(void)
 
 __always_inline void lame_handle_bret(uint64_t *ret) {
 
-	log_warn("[LAME][func:lame_handle_bret] ret=0x%lx", *(ret-8));
+	log_warn("[LAME][func:lame_handle_bret] ret=0x%lx", *(ret+8));
 
 }
 

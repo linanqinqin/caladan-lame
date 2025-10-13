@@ -5,6 +5,8 @@
 #include <base/trapframe.h>
 #include "lame.h"
 
+.extern cfg_lame_stall_cycles
+
 .file "lame.S"
 .section        .note.GNU-stack,"",@progbits
 .text
@@ -707,11 +709,18 @@ __lame_entry_stall_bret:
 	movq 	%rax, THREAD_TF_OFFSET + RAX(%r8)
 	movq 	%rcx, THREAD_TF_OFFSET + RCX(%r8)
 	movq 	%rdx, THREAD_TF_OFFSET + RDX(%r8)
+	movq 	%r9,  THREAD_TF_OFFSET + R9(%r8)
+	movq 	%r10, THREAD_TF_OFFSET + R10(%r8)
 
+	/* Get current TSC and calculate deadline using cfg_lame_stall_cycles */
 	rdtsc
 	shlq	$32, %rdx
 	orq		%rdx, %rax /* rax = current tsc */
-	addq 	$800, %rax /* rax = deadline tsc */
+	
+	/* Load cfg_lame_stall_cycles and add to current TSC */
+	movl	cfg_lame_stall_cycles(%rip), %r9d
+	addq	%r9, %rax /* rax = deadline tsc */
+	movq	%rax, %r10 /* r10 = deadline tsc (save for comparison) */
 
 	/* Per WAITPKG/TPAUSE calling convention:
      *  ECX = hint (0 = C0.1)
@@ -719,14 +728,25 @@ __lame_entry_stall_bret:
 	 */
 	movq    %rax, %rdx          /* EAX = low 32 */
 	shrq    $32, %rdx           /* EDX = high 32 */
-	xorl    %ecx, %ecx          /* EAX = hint (0 = C0.1) */
+	xorl    %ecx, %ecx          /* ECX = hint (0 = C0.1) */
 
+	/* Loop to ensure we actually stall for the required cycles */
+1:
 	tpause 	%ecx
+	
+	/* Check if we've reached the deadline */
+	rdtsc
+	shlq	$32, %rdx
+	orq		%rdx, %rax /* rax = current tsc */
+	cmpq	%r10, %rax /* compare current tsc with deadline */
+	jb		1b 		/* if current < deadline, loop again */
 
 	/* Restore volatile registers from stack */
 	movq 	THREAD_TF_OFFSET + RAX(%r8), %rax
 	movq 	THREAD_TF_OFFSET + RCX(%r8), %rcx
 	movq 	THREAD_TF_OFFSET + RDX(%r8), %rdx
+	movq 	THREAD_TF_OFFSET + R9(%r8),  %r9
+	movq 	THREAD_TF_OFFSET + R10(%r8), %r10
 
 	/* restore r8 from LAME scratch space */
 	movq 	%gs:__perthread_lame_scratch(%rip), %r8
