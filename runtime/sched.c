@@ -499,7 +499,6 @@ done:
 	BUG_ON(lame_bundle_add_uthread(l, th, true) != 0); // add the first uthread to the bundle
 	
 	/* Try to add additional uthreads from the runqueue */
-	unsigned int bundle_th_added = 0;
 	for (unsigned int i = 0; (i < l->lame_bundle.size-l->lame_bundle.used) && (l->rq_head != l->rq_tail); i++) {
 		thread_t *bundle_th;
 		/* Pop the next uthread from the runqueue */
