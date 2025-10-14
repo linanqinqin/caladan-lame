@@ -499,7 +499,6 @@ done:
 	BUG_ON(lame_bundle_add_uthread(l, th, true) != 0); // add the first uthread to the bundle
 	
 	/* Try to add additional uthreads from the runqueue */
-	thread_t *bundle_tmp[LAME_BUNDLE_SIZE_MAX]; // temp array to store additional uthreads for updating run_start_tsc later
 	unsigned int bundle_th_added = 0;
 	for (unsigned int i = 0; (i < l->lame_bundle.size-l->lame_bundle.used) && (l->rq_head != l->rq_tail); i++) {
 		thread_t *bundle_th;
@@ -508,7 +507,6 @@ done:
 		ACCESS_ONCE(l->q_ptrs->rq_tail)++;
 		/* add the next uthread to the bundle */
 		BUG_ON(lame_bundle_add_uthread(l, bundle_th, false) != 0); 	
-		bundle_tmp[bundle_th_added++] = bundle_th;
 	}
 	lame_bundle_print(l); // print the lame bundle
 	/* end */
