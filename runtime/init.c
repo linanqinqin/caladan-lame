@@ -303,6 +303,7 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	log_info("LAME_UTHREAD_WRAPPER_LAME_COUNT: %lu", offsetof(struct lame_uthread_wrapper, lame_count));
 	log_info("LAME_UTHREAD_WRAPPER_SIZE: %lu", sizeof(struct lame_uthread_wrapper));
 	log_info("THREAD_TF_OFFSET: %lu", offsetof(struct thread, tf));
+	log_info("THREAD_FSBASE_OFFSET: %lu", offsetof(struct thread, fsbase));
 #endif
 	/* end */
 	
