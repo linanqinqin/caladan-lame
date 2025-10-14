@@ -586,7 +586,7 @@ void lame_print_tsc_counters(void)
 {
 	unsigned int i;
 	for (i = 0; i < maxks; i++) {
-		struct kthread *k = ks[i];
+		struct kthread *k = &ks[i];
 		if (!k)
 			continue;
 		log_warn("[LAME][TSC][kthread:%u] avg_cycles=%lu total_cycles=%lu total_lames=%lu", i,

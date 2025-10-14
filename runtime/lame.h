@@ -69,4 +69,4 @@
  * The thread_tf is located at offset 0 from the start of the thread structure.
  */
 
-#define THREAD_TF_OFFSET            (0)      /* offset of tf in thread_t */
+#define THREAD_TF_OFFSET            (40)      /* offset of tf in thread_t */

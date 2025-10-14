@@ -534,13 +534,6 @@ done:
 	/* update exported thread run start time */
 	ACCESS_ONCE(l->q_ptrs->run_start_tsc) = perthread_get_stable(last_tsc);
 
-	/* linanqinqin*/
-	/* update run_start_tsc for additional uthreads */
-	for (unsigned int i = 0; i < bundle_th_added; i++) {
-		bundle_tmp[i]->run_start_tsc = perthread_get_stable(last_tsc);
-	}
-	/* end */
-
 	/* increment the RCU generation number (odd is in thread) */
 	store_release(&l->rcu_gen, l->rcu_gen + 1);
 	ACCESS_ONCE(l->q_ptrs->rcu_gen) = l->rcu_gen;
@@ -619,9 +612,6 @@ static __always_inline void enter_schedule(thread_t *curth)
 
 		/* add the next uthread to the bundle */
 		BUG_ON(lame_bundle_add_uthread(k, bundle_th, false) != 0); 
-
-		/* update run_start_tsc here; this is not the cleanest way but should work */
-		bundle_th->run_start_tsc = perthread_get_stable(last_tsc);
 	}
 	lame_bundle_print(k); // print the lame bundle
 	/* end */
