@@ -73,4 +73,4 @@
 
 #define THREAD_HAS_FSBASE_OFFSET    (0)       /* offset of has_fsbase bit field */
 #define THREAD_TF_OFFSET            (40)      /* offset of tf in thread_t */
-#define THREAD_FSBASE_OFFSET        (88)      /* offset of fsbase field */
+#define THREAD_FSBASE_OFFSET        (248)      /* offset of fsbase field */
