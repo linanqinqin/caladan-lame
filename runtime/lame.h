@@ -64,9 +64,13 @@
 #define LAME_BUNDLE_OFFSET          (0x300)  /* offset of lame_bundle in kthread */
 
 /*
- * Thread Structure - Trapframe Offset
+ * Thread Structure - Field Offsets
  * 
- * The thread_tf is located at offset 0 from the start of the thread structure.
+ * Based on struct thread in inc/runtime/thread.h:
+ * - has_fsbase is a bit field at offset 0 (1 bit)
+ * - fsbase is a uint64_t field near the end of the structure
  */
 
+#define THREAD_HAS_FSBASE_OFFSET    (0)       /* offset of has_fsbase bit field */
 #define THREAD_TF_OFFSET            (40)      /* offset of tf in thread_t */
+#define THREAD_FSBASE_OFFSET        (88)      /* offset of fsbase field */

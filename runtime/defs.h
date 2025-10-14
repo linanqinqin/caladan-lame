@@ -442,7 +442,9 @@ BUILD_ASSERT(LAME_UTHREAD_WRAPPER_SIZE == sizeof(struct lame_uthread_wrapper));
 BUILD_ASSERT(LAME_UTHREAD_WRAPPER_SIZE == 0x20); /* must be 32 bytes */
 
 /* Verify thread structure trapframe offset */
+BUILD_ASSERT(THREAD_HAS_FSBASE_OFFSET == offsetof(struct thread, has_fsbase));
 BUILD_ASSERT(THREAD_TF_OFFSET == offsetof(struct thread, tf));
+BUILD_ASSERT(THREAD_FSBASE_OFFSET == offsetof(struct thread, fsbase));
 /* end */
 
 extern struct kthread ks[NCPU];

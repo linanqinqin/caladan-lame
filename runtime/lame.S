@@ -618,6 +618,20 @@ __lame_entry2_bret:
 	/* Update __self to point to the new uthread */
 	movq	%r11, %gs:__perthread___self(%rip)
 
+	/* Handle fsbase for the new uthread */
+	/* Check if next_th->has_fsbase is false (bit 1 of byte at offset 0) */
+	testb	$0x02, THREAD_HAS_FSBASE_OFFSET(%r11)	/* test has_fsbase bit */
+	jnz	2f		/* Skip if has_fsbase is true */
+
+	/* Set next_th->fsbase = perthread_read(runtime_fsbase) */
+	movq	%gs:__perthread_runtime_fsbase(%rip), %r9	/* Load runtime_fsbase */
+	movq	%r9, THREAD_FSBASE_OFFSET(%r11)		/* Store to next_th->fsbase */
+
+2: 	/* fsbase already set */
+	/* Set fsbase using next_th->fsbase */
+	movq	THREAD_FSBASE_OFFSET(%r11), %r9		/* Load next_th->fsbase */
+	wrfsbase	%r9				/* Set fsbase register */
+
 	/* Flattened context switch - save current thread state */
 	/* Save IP and stack pointer to current thread's trapframe */
 	/* IP should point to .lame_entry2_exit for when we return to this thread */
