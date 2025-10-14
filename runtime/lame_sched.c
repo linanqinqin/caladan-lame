@@ -562,6 +562,12 @@ __always_inline void lame_handle(void)
 	/* Update __self to point to the new uthread */
 	perthread_store(__self, next_th);
 
+	/* update fsbase*/
+	if (!next_th->has_fsbase)
+		next_th->fsbase = perthread_read(runtime_fsbase);
+
+	set_fsbase(next_th->fsbase);
+
 	/* Call __lame_jmp_thread_direct to perform context switch */
 	__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
 
