@@ -620,7 +620,7 @@ __lame_entry2_bret:
 
 	/* Handle fsbase for the new uthread */
 	/* Check if next_th->has_fsbase is false (bit 1 of byte at offset 0) */
-	testb	$0x02, THREAD_HAS_FSBASE_OFFSET(%r11)	/* test has_fsbase bit */
+	testb	$THREAD_HAS_FSBASE_TEST_MASK, THREAD_HAS_FSBASE_OFFSET(%r11)	/* test has_fsbase bit */
 	jnz	2f		/* Skip if has_fsbase is true */
 
 	/* Set next_th->fsbase = perthread_read(runtime_fsbase) */

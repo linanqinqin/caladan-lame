@@ -444,6 +444,13 @@ BUILD_ASSERT(LAME_UTHREAD_WRAPPER_SIZE == 0x20); /* must be 32 bytes */
 /* Verify thread structure trapframe offset */
 BUILD_ASSERT(THREAD_TF_OFFSET == offsetof(struct thread, tf));
 BUILD_ASSERT(THREAD_FSBASE_OFFSET == offsetof(struct thread, fsbase));
+
+/* verify thread_t bit field positions */
+typedef union {
+	thread_t t;
+	uint8_t  b[sizeof(thread_t)];
+} thread_t_overlay;
+BUILD_ASSERT(THREAD_HAS_FSBASE_TEST_MASK == ((thread_t_overlay){.t.has_fsbase = 1}).b[THREAD_HAS_FSBASE_OFFSET]);
 /* end */
 
 extern struct kthread ks[NCPU];
