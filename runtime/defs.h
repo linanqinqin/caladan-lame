@@ -450,7 +450,9 @@ static const union {
 	thread_t t;
 	uint8_t  b[sizeof(thread_t)];
 } thread_t_overlay = {.t = {.has_fsbase = 1}};
-BUILD_ASSERT(THREAD_HAS_FSBASE_TEST_MASK == thread_t_overlay.b[THREAD_HAS_FSBASE_OFFSET]);
+enum {
+	_check_has_fsbase_bit = thread_t_overlay.b[THREAD_HAS_FSBASE_OFFSET] == THREAD_HAS_FSBASE_TEST_MASK? 1: -1
+};
 /* end */
 
 extern struct kthread ks[NCPU];
