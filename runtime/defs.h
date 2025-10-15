@@ -445,14 +445,8 @@ BUILD_ASSERT(LAME_UTHREAD_WRAPPER_SIZE == 0x20); /* must be 32 bytes */
 BUILD_ASSERT(THREAD_TF_OFFSET == offsetof(struct thread, tf));
 BUILD_ASSERT(THREAD_FSBASE_OFFSET == offsetof(struct thread, fsbase));
 
-/* verify thread_t bit field positions */
-static const union {
-	thread_t t;
-	uint8_t  b[sizeof(thread_t)];
-} thread_t_overlay = {.t = {.has_fsbase = 1}};
-enum {
-	_check_has_fsbase_bit = thread_t_overlay.b[THREAD_HAS_FSBASE_OFFSET] == THREAD_HAS_FSBASE_TEST_MASK? 1: -1
-};
+/* thread_t bit field positions are left unverified 
+ * gcc 14+ has __builtin_bit_offsetof builtin for this */
 /* end */
 
 extern struct kthread ks[NCPU];

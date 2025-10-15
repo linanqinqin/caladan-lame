@@ -21,7 +21,12 @@ typedef struct thread thread_t;
  */
 struct thread {
 	bool	main_thread:1;
-	bool	has_fsbase:1;
+	/* linanqinqin */
+	/* has_fsbase is a bit field at bit 1 of byte 0
+	 * this is left unverified at build time
+	 * leaving this comment here so that a future rebase should cause a conflict, if this struct is ever modified */
+	/* end*/
+	bool	has_fsbase:1; /* linanqinqin | must be at bit 1 of byte 0 | end */
 	bool	thread_ready:1;
 	bool	thread_running;
 	atomic8_t	interrupt_state;
