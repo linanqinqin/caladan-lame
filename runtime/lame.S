@@ -646,6 +646,14 @@ __lame_entry2_bret:
 	movq	THREAD_FSBASE_OFFSET(%r11), %r9		/* Load next_th->fsbase */
 	wrfsbase	%r9				/* Set fsbase register */
 
+	/* Junction RSEQ on_sched check and fixup */
+	movb 	THREAD_JUNCTION_THREAD_OFFSET(%r11), %al
+	testb 	%al, %al
+	jz	3f
+	movq 	%r11, %rdi
+	call 	on_sched
+3:
+
 	/* Flattened context switch - save current thread state */
 	/* Save IP and stack pointer to current thread's trapframe */
 	/* IP should point to .lame_entry2_exit for when we return to this thread */
