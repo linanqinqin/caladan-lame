@@ -16,6 +16,9 @@ DEFINE_PERTHREAD(uint64_t, lame_scratch);
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
 
+/* RSEQ hook into Junction */
+extern void on_sched(thread_t *th);
+
 /**
  * lame_bundle_init - initializes a LAME bundle for a kthread
  * @k: the kthread to initialize the bundle for
@@ -567,6 +570,9 @@ __always_inline void lame_handle(void)
 		next_th->fsbase = perthread_read(runtime_fsbase);
 
 	set_fsbase(next_th->fsbase);
+
+	if (next_th->junction_thread)
+		on_sched(next_th);
 
 	/* Call __lame_jmp_thread_direct to perform context switch */
 	__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
