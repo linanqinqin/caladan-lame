@@ -72,7 +72,7 @@
  */
 
 #define THREAD_HAS_FSBASE_OFFSET    (0)       /* offset of has_fsbase bit field */
-#define THREAD_TF_OFFSET            (40)      /* offset of tf in thread_t */
-#define THREAD_FSBASE_OFFSET        (248)      /* offset of fsbase field */
+#define THREAD_TF_OFFSET            (112)      /* offset of tf in thread_t */
+#define THREAD_FSBASE_OFFSET        (320)      /* offset of fsbase field */
 
 #define THREAD_HAS_FSBASE_TEST_MASK    (0x02)       /* test mask for has_fsbase bit field (bit 1) */
