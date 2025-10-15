@@ -41,6 +41,9 @@ static DEFINE_PERTHREAD(struct tcache_perthread, thread_pt);
 /* used to track cycle usage in scheduler */
 static DEFINE_PERTHREAD(uint64_t, last_tsc);
 
+// Junction overrides this function.
+void __weak on_sched(thread_t *th) {}
+
 /**
  * In inc/runtime/thread.h, this function is declared inline (rather than static
  * inline) so that it is accessible to the Rust bindings. As a result, it must
@@ -103,6 +106,10 @@ static void jmp_thread(thread_t *th)
 	set_fsbase(th->fsbase);
 
 	th->thread_running = true;
+
+	if (th->junction_thread)
+		on_sched(th);
+
 	/* linanqinqin */
 	lame_bundle_set_running_true_all(myk()); // set all uthreads in bundle to running = true
 	lame_sched_enable(myk()); // enable lame scheduling
@@ -146,6 +153,10 @@ static void jmp_thread_direct(thread_t *oldth, thread_t *newth)
 	set_fsbase(newth->fsbase);
 
 	newth->thread_running = true;
+
+	if (newth->junction_thread)
+		on_sched(newth);
+
 	/* linanqinqin */
 	lame_bundle_set_running_true_all(myk()); // set all uthreads in bundle to running = true
 	lame_sched_enable(myk()); // enable lame scheduling
@@ -965,6 +976,8 @@ static __always_inline thread_t *__thread_create(void)
 	th->thread_ready = false;
 	th->thread_running = false;
 	th->tlsvar = 0;
+	th->junction_thread = false;
+	th->link_armed = false;
 	th->cur_kthread = NCPU;
 	// Can be used to detect newly created thread.
 	th->ready_tsc = 0;

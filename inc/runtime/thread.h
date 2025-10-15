@@ -28,8 +28,13 @@ struct thread {
 	/* end*/
 	bool	has_fsbase:1; /* linanqinqin | must be at bit 1 of byte 0 | end */
 	bool	thread_ready:1;
+	bool	link_armed:1;
+	bool	junction_thread;
 	bool	thread_running;
+	bool	in_syscall;
 	atomic8_t	interrupt_state;
+	struct thread_tf	*entry_regs;
+	unsigned long	junction_tstate_buf[20];
 	struct stack	*stack;
 	uint16_t	last_cpu;
 	uint16_t	cur_kthread;
@@ -40,7 +45,6 @@ struct thread {
 	struct list_node	interruptible_link;
 	uint64_t	tlsvar;
 	uint64_t	fsbase;
-	unsigned long		junction_tstate_buf[24];
 };
 
 extern uint64_t thread_get_total_cycles(thread_t *th);
@@ -74,16 +78,6 @@ static inline unsigned int get_current_affinity(void)
 static inline thread_t *thread_self(void)
 {
 	return perthread_read_const_p(__const_self);
-}
-
-static inline uint64_t get_uthread_specific(void)
-{
-    return thread_self()->tlsvar;
-}
-
-static inline void set_uthread_specific(uint64_t val)
-{
-    thread_self()->tlsvar = val;
 }
 
 
