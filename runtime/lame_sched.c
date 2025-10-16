@@ -523,7 +523,7 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
  * 4. Get next uthread from bundle
  * 5. Call __jmp_thread_direct to perform context switch
  */
-__always_inline void lame_handle(void)
+void lame_handle(void)
 {
 	struct kthread *k = myk();
 	thread_t *cur_th, *next_th;
@@ -584,13 +584,13 @@ __always_inline void lame_handle(void)
 		  myk_index(), cur_th);
 }
 
-__always_inline void lame_handle_bret(uint64_t *ret) {
+void lame_handle_bret(uint64_t *ret) {
 
 	log_warn("[LAME][func:lame_handle_bret] ret=0x%lx", *(ret+8));
 
 }
 
-__always_inline void lame_stall(void) {
+void lame_stall(void) {
 
     _tpause(0, __rdtsc() + (uint64_t)cfg_lame_stall_cycles);
 
