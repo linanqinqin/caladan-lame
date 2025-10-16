@@ -75,6 +75,7 @@ extern void __lame_entry_nop();
 extern void __lame_entry_bret();
 extern void __lame_entry2_bret();
 extern void __lame_entry_stall_bret();
+extern void __lame_entry_stall_C_bret();
 extern void __lame_entry_nop_bret();
 /* end */
 

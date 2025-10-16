@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <x86intrin.h>
 
 #include <base/log.h>
 
@@ -586,6 +587,12 @@ __always_inline void lame_handle_bret(uint64_t *ret) {
 
 	log_warn("[LAME][func:lame_handle_bret] ret=0x%lx", *(ret+8));
 
+}
+
+__always_inline void lame_stall(void) {
+
+    _tpause(0, __rdtsc() + (uint64_t)cfg_lame_stall_cycles);
+	
 }
 
 void lame_print_tsc_counters(void)

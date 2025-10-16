@@ -211,7 +211,7 @@ static int lame_init(void)
 		/* via PMU, with stall emulation */
 		} else if (cfg_lame_register == RT_LAME_REGISTER_STALL) {
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
-			arg.handler_addr = (__u64)__lame_entry_stall_bret;
+			arg.handler_addr = (__u64)__lame_entry_stall_C_bret;
 		/* via PMU, with nop */
 		} else {
 			/* nop */

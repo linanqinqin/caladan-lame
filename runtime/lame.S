@@ -802,6 +802,56 @@ __lame_entry_stall_bret:
 	bretq
 
 
+.align 16
+.globl __lame_entry_stall_C_bret
+.type __lame_entry_stall_C_bret, @function
+__lame_entry_stall_C_bret:
+	
+	/* check if preemption is already disabled. This usually indiates that either:
+	 * 1. regular scheduling is happening
+	 * 2. a LAME handler is already running 
+	 */
+	cmpl	$0, %gs:__perthread_preempt_cnt(%rip)
+	je	1f
+	/* if preemption is already disabled, just return */
+	bretq
+
+1:
+	/* Disable preemption */
+	addl	$1, %gs:__perthread_preempt_cnt(%rip)
+
+	/* Save volatile registers to stack */
+	pushq	%rax
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rsi
+	pushq	%rdi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+
+	/* Call C wrapper function to handle LAME logic */
+	call	lame_stall
+
+	/* Restore volatile registers from stack */
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdi
+	popq	%rsi
+	popq	%rdx
+	popq	%rcx
+	popq	%rax
+
+	/* Re-enable preemption */
+	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+
+	/* Return from LAME */
+	bretq
+
+
 /**
  * __lame_entry_nop_bret - LAME handler entry point (via PMI) with nop
  * 
