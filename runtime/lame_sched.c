@@ -16,6 +16,7 @@ DEFINE_PERTHREAD(uint64_t, lame_scratch);
 
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
+extern unsigned int cfg_lame_stall_cycles;
 
 /* RSEQ hook into Junction */
 extern void on_sched(thread_t *th);
@@ -592,7 +593,7 @@ __always_inline void lame_handle_bret(uint64_t *ret) {
 __always_inline void lame_stall(void) {
 
     _tpause(0, __rdtsc() + (uint64_t)cfg_lame_stall_cycles);
-	
+
 }
 
 void lame_print_tsc_counters(void)
