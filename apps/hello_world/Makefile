@@ -23,8 +23,11 @@ parse_bundle_obj = $(parse_bundle_src:.c=.o)
 matmul_src = matmul.c
 matmul_obj = $(matmul_src:.c=.o)
 
+tpause_src = tpause.c
+tpause_obj = $(tpause_src:.c=.o)
+
 # must be first
-all: hello_world threads network int parse_lame parse_bundle matmul threads_native
+all: hello_world threads network int parse_lame parse_bundle matmul threads_native tpause
 
 lib_shim = $(ROOT_PATH)/shim/libshim.a -ldl
 
@@ -55,10 +58,14 @@ matmul: $(matmul_obj)
 
 # Native glibc version of threads (no Caladan runtime)
 threads_native: $(threads_obj)
-	$(CC) $(CFLAGS) -pthread -o $@ $(threads_obj)
+	$(CC) -pthread -o $@ $(threads_obj)
+
+# Native glibc version of tpause (no Caladan runtime)
+tpause: $(tpause_obj)
+	$(CC) -o $@ $(tpause_obj)
 
 # general build rules for all targets
-src = $(hello_world_src) $(threads_src) $(network_src) $(int_src) $(parse_lame_src) $(parse_bundle_src) $(matmul_src)
+src = $(hello_world_src) $(threads_src) $(network_src) $(int_src) $(parse_lame_src) $(parse_bundle_src) $(matmul_src) $(tpause_src)
 obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 
@@ -75,4 +82,4 @@ endif
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(dep) hello_world threads network int parse_lame parse_bundle matmul threads_native 
+	rm -f $(obj) $(dep) hello_world threads network int parse_lame parse_bundle matmul threads_native tpause 
