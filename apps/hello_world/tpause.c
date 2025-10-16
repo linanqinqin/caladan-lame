@@ -78,15 +78,8 @@ int main(int argc, char *argv[]) {
     /* linanqinqin */
     // Main loop: iterate for the specified number of times
     for (int i = 0; i < num_loops; i++) {
-        printf("Loop %d/%d - calling tpause with %u cycles\n", i + 1, num_loops, pause_cycles);
-        
         // Call tpause to pause execution for the specified number of cycles
         tpause(pause_cycles);
-        
-        // Optional: print progress every 10% of loops
-        if ((i + 1) % (num_loops / 10 + 1) == 0) {
-            printf("  Progress: %d%% complete\n", (i + 1) * 100 / num_loops);
-        }
     }
     /* end */
     
