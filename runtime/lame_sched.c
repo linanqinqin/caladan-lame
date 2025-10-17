@@ -592,7 +592,8 @@ void lame_handle_bret(uint64_t *ret) {
 
 void lame_stall(void) {
 
-    _tpause(0, __rdtsc() + (uint64_t)cfg_lame_stall_cycles);
+    // _tpause(0, __rdtsc() + (uint64_t)cfg_lame_stall_cycles);
+    _tpause(0, __rdtsc() + 800ULL);
 
 }
 
