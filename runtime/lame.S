@@ -510,7 +510,32 @@ __lame_entry_bret:
 	 */
 	cmpl	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
-	/* if preemption is already disabled, just return */
+	/* if preemption is already disabled, we cannot nest LAME switching
+	 * thus this needs to be a full stall */
+	/* Save volatile registers to stack */
+	pushq	%rax
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rsi
+	pushq	%rdi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+
+	/* perform a full stall */
+	call	lame_stall
+
+	/* Restore volatile registers from stack */
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdi
+	popq	%rsi
+	popq	%rdx
+	popq	%rcx
+	popq	%rax
 	bretq
 
 1:
@@ -582,7 +607,32 @@ __lame_entry2_bret:
 	 */
 	cmpl	$0, %gs:__perthread_preempt_cnt(%rip)
 	je	1f
-	/* if preemption is already disabled, just return */
+	/* if preemption is already disabled, we cannot nest LAME switching
+	 * thus this needs to be a full stall */
+	/* Save volatile registers to stack */
+	pushq	%rax
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rsi
+	pushq	%rdi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+
+	/* perform a full stall */
+	call	lame_stall
+
+	/* Restore volatile registers from stack */
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdi
+	popq	%rsi
+	popq	%rdx
+	popq	%rcx
+	popq	%rax
 	bretq
 
 1:
