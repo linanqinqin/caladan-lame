@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <x86intrin.h>
 
 #include <base/log.h>
 
