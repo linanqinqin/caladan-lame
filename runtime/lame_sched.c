@@ -576,6 +576,14 @@ __always_inline void lame_handle_bret(uint64_t *ret) {
 
 }
 
+__always_inline void lame_stall(void) {
+
+	struct kthread *k = myk();
+	k->lame_bundle.total_lames++; /* use this field for skipped LAMEs, for now */
+	
+    _tpause(0, __rdtsc() + 600ULL);
+}
+
 void lame_print_tsc_counters(void)
 {
 	unsigned int i;
