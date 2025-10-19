@@ -558,8 +558,8 @@ __lame_entry2_bret:
 	 * 1. regular scheduling is happening
 	 * 2. a LAME handler is already running 
 	 */
-	cmpl	$0, %gs:__perthread_preempt_cnt(%rip)
-	je	1f
+	testl   $0x7fffffff, %gs:__perthread_preempt_cnt(%rip)
+	jz	1f
 	/* if preemption is already disabled, just return */
 	/* Save volatile registers to stack */
 	pushq	%rax
