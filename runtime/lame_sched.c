@@ -523,6 +523,8 @@ __always_inline void lame_handle(void)
 {
 	struct kthread *k = myk();
 	thread_t *cur_th, *next_th;
+	unsigned char *xsave_buf;
+	unsigned long active_xstates;
 
 	/* Check if LAME scheduling is enabled */
 	if (!lame_sched_is_dynamically_enabled(k)) {
@@ -563,8 +565,18 @@ __always_inline void lame_handle(void)
 	/* Update __self to point to the new uthread */
 	perthread_store(__self, next_th);
 
+	/* xsave */
+	xsave_buf = alloca(xsave_max_size + 64); 	/* allocate buffer for xsave area on stack */
+	xsave_buf = (unsigned char *)align_up((uintptr_t)xsave_buf, 64); 	/* align to 64 bytes */
+	__builtin_memset(xsave_buf + 512, 0, 64); 	/* zero xsave header */
+	active_xstates = __builtin_ia32_xgetbv(1); 	/* get active xstates */
+	__builtin_ia32_xsavec64(xsave_buf, active_xstates); 	/* save state */
+
 	/* Call __lame_jmp_thread_direct to perform context switch */
 	__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
+
+	/* restore xsave state */
+	__builtin_ia32_xrstor64(xsave_buf, active_xstates); 	
 
 	/* This point is reached when switching back to this thread */
 	log_debug("[LAME][kthread:%d][func:lame_handle] resumed uthread %p",
