@@ -629,6 +629,9 @@ __always_inline void lame_handle_bret_slowpath(void) {
 	/* save state */
 	__builtin_ia32_xsavec64(xsave_buf, active_xstates);
 
+	/* increment total LAMEs counter */
+	k->lame_bundle.total_lames++; 
+
 	if (do_cede) {
 		thread_cede();
 	} else {
