@@ -626,6 +626,7 @@ __always_inline void lame_handle_bret_slowpath(void) {
 	/* increment total LAMEs counter */
 	k->lame_bundle.total_lames++; 
 
+	bool do_cede = preempt_cede_needed(k);
 	if (do_cede) {
 		thread_cede();
 	} else {
