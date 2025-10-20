@@ -206,12 +206,12 @@ static int lame_init(void)
 		/* via PMU, with LAME switching */
 		} else if (cfg_lame_register == RT_LAME_REGISTER_PMU) {
 			register_mode = LAME_REGISTER_PMU;
-			
-			if (cfg_lame_bundle_size == 2) {
-				arg.handler_addr = (__u64)__lame_entry2_bret;
-			} else {
-				arg.handler_addr = (__u64)__lame_entry_bret;
-			}
+			arg.handler_addr = (__u64)__lame_entry_bret_slowpath;
+			// if (cfg_lame_bundle_size == 2) {
+			// 	arg.handler_addr = (__u64)__lame_entry2_bret;
+			// } else {
+			// 	arg.handler_addr = (__u64)__lame_entry_bret;
+			// }
 		/* via PMU, with stall emulation */
 		} else if (cfg_lame_register == RT_LAME_REGISTER_STALL) {
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
