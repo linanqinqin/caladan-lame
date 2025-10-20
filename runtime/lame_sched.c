@@ -606,8 +606,6 @@ __always_inline void lame_handle_bret_slowpath(void) {
 
 	/* resume execution if preemption is disabled */
 	if (!preempt_enabled()) {
-		BUILD_ASSERT(~PREEMPT_NOT_PENDING == 0x7fffffff);
-		perthread_andi(preempt_cnt, 0x7fffffff);
 		return;
 	}
 
