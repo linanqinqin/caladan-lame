@@ -548,6 +548,9 @@ __always_inline __nofp void lame_handle(void)
 	active_xstates = __builtin_ia32_xgetbv(1); 	/* get active xstates */
 	__builtin_ia32_xsavec64(xsave_buf, active_xstates); 	/* save state */
 
+	/* increment total LAMEs counter */
+	k->lame_bundle.total_lames++; 
+
 	/* Call __lame_jmp_thread_direct to perform context switch */
 	__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
 
