@@ -211,7 +211,7 @@ int lame_bundle_remove_uthread_at_active(struct kthread *k)
  *
  * Returns the number of active uthreads.
  */
-__always_inline unsigned int lame_bundle_get_used_count(struct kthread *k)
+__always_inline __nofp unsigned int lame_bundle_get_used_count(struct kthread *k)
 {
 	 return k->lame_bundle.used;
 }
@@ -223,7 +223,7 @@ __always_inline unsigned int lame_bundle_get_used_count(struct kthread *k)
  * Returns the next uthread to run, or NULL if none available.
  * The active field in the bundle represents the currently running uthread.
  */
-__always_inline thread_t *lame_sched_get_next_uthread(struct kthread *k)
+__always_inline __nofp thread_t *lame_sched_get_next_uthread(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int start_idx, i;
@@ -238,8 +238,6 @@ __always_inline thread_t *lame_sched_get_next_uthread(struct kthread *k)
 			bundle->total_lames++;
 			bundle->uthreads[idx].lame_count++;
 			
-			log_debug("[LAME][kthread:%d][func:lame_sched_get_next_uthread] uthread %p selected from bundle slot %d",
-				 myk_index(), bundle->uthreads[idx].uthread, idx);
 			return bundle->uthreads[idx].uthread;
 		}
 	}
@@ -254,7 +252,7 @@ __always_inline thread_t *lame_sched_get_next_uthread(struct kthread *k)
  * Returns the currently active uthread, or NULL if none.
  * The active field in the bundle represents the currently running uthread.
  */
-__always_inline thread_t *lame_sched_get_current_uthread(struct kthread *k)
+__always_inline __nofp thread_t *lame_sched_get_current_uthread(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 
@@ -272,7 +270,7 @@ __always_inline thread_t *lame_sched_get_current_uthread(struct kthread *k)
  * Returns true if bundle scheduling is dynamically enabled,
  * false otherwise.
  */
-__always_inline bool lame_sched_is_enabled(struct kthread *k)
+__always_inline __nofp bool lame_sched_is_enabled(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	return bundle->enabled;
@@ -287,13 +285,11 @@ __always_inline bool lame_sched_is_enabled(struct kthread *k)
  * Note: Bundle scheduling must be statically enabled (size > 1) for this
  * to have any effect.
  */
-__always_inline void lame_sched_enable(struct kthread *k)
+__always_inline __nofp void lame_sched_enable(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	
 	bundle->enabled = true;
-	log_debug("[LAME][kthread:%d][func:lame_sched_enable] enabled LAME bundle scheduling",
-			myk_index());
 }
 
 /**
@@ -304,13 +300,11 @@ __always_inline void lame_sched_enable(struct kthread *k)
  * when entering critical sections where bundle scheduling should be avoided
  * (e.g., during yield operations, scheduler critical sections).
  */
-__always_inline void lame_sched_disable(struct kthread *k)
+__always_inline __nofp void lame_sched_disable(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	
 	bundle->enabled = false;
-	log_debug("[LAME][kthread:%d][func:lame_sched_disable] disabled LAME bundle scheduling",
-		myk_index());
 }
 
 /**
@@ -320,7 +314,7 @@ __always_inline void lame_sched_disable(struct kthread *k)
  * Returns true if bundle scheduling is statically enabled (bundle size > 1),
  * false otherwise. This is a configuration check, not a runtime state.
  */
-__always_inline bool lame_sched_is_statically_enabled(struct kthread *k)
+__always_inline __nofp bool lame_sched_is_statically_enabled(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	return bundle->size > 1;
@@ -334,7 +328,7 @@ __always_inline bool lame_sched_is_statically_enabled(struct kthread *k)
  * false otherwise. This should be checked after confirming static enablement
  * with lame_sched_is_statically_enabled().
  */
-__always_inline bool lame_sched_is_dynamically_enabled(struct kthread *k)
+__always_inline __nofp bool lame_sched_is_dynamically_enabled(struct kthread *k)
 {
 	return k->lame_bundle.enabled;
 }
@@ -381,7 +375,7 @@ void lame_bundle_print(struct kthread *k)
  * This is called when uthreads are added to the bundle to maintain the illusion
  * that they are "running" from Caladan's perspective.
  */
-void lame_bundle_set_ready_false_all(struct kthread *k)
+__always_inline void lame_bundle_set_ready_false_all(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
@@ -391,9 +385,6 @@ void lame_bundle_set_ready_false_all(struct kthread *k)
 			bundle->uthreads[i].uthread->thread_ready = false;
 		}
 	}
-
-	log_debug("[LAME][kthread:%d][func:lame_bundle_set_ready_false_all]",
-		 myk_index());
 }
 
 /**
@@ -404,7 +395,7 @@ void lame_bundle_set_ready_false_all(struct kthread *k)
  * This is called when uthreads are added to the bundle to maintain the illusion
  * that they are "running" from Caladan's perspective.
  */
-void lame_bundle_set_running_true_all(struct kthread *k)
+__always_inline void lame_bundle_set_running_true_all(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int i;
@@ -414,9 +405,6 @@ void lame_bundle_set_running_true_all(struct kthread *k)
 			bundle->uthreads[i].uthread->thread_running = true;
 		}
 	}
-
-	log_debug("[LAME][kthread:%d][func:lame_bundle_set_running_true_all]",
-		 myk_index());
 }
 
 __always_inline static void __lame_bundle_to_rq(struct kthread *k) 
@@ -458,9 +446,6 @@ __always_inline static void __lame_bundle_to_rq(struct kthread *k)
 			bundle->uthreads[i].uthread = NULL;
 			bundle->uthreads[i].cycles = 0;
 			bundle->uthreads[i].lame_count = 0;
-			
-			log_debug("[LAME][kthread:%d][func:lame_sched_bundle_dismantle] returned uthread %p to runqueue",
-				 myk_index(), th);
 		}
 	}
 }
@@ -519,7 +504,7 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
  * 4. Get next uthread from bundle
  * 5. Call __jmp_thread_direct to perform context switch
  */
-__always_inline void lame_handle(void)
+__always_inline __nofp void lame_handle(void)
 {
 	struct kthread *k = myk();
 	thread_t *cur_th, *next_th;
@@ -529,8 +514,6 @@ __always_inline void lame_handle(void)
 	/* Check if LAME scheduling is enabled */
 	if (!lame_sched_is_dynamically_enabled(k)) {
 		/* this should not happen */
-		log_err("[LAME][kthread:%d][func:lame_handle] scheduling disabled",
-			myk_index());
 		preempt_enable();
 		return;
 	}
@@ -544,8 +527,6 @@ __always_inline void lame_handle(void)
 	/* Get current uthread's trapframe */
 	cur_th = lame_sched_get_current_uthread(k);
 	if (!cur_th) {
-		log_err("[LAME][kthread:%d][func:lame_handle] no current uthread",
-			myk_index());
 		preempt_enable();
 		return;
 	}
@@ -553,14 +534,9 @@ __always_inline void lame_handle(void)
 	/* Get next uthread from bundle */
 	next_th = lame_sched_get_next_uthread(k);
 	if (!next_th) {
-		log_err("[LAME][kthread:%d][func:lame_handle] no next uthread available",
-			myk_index());
 		preempt_enable();
 		return;
 	}
-
-	log_debug("[LAME][kthread:%d][func:lame_handle] switching from uthread %p to %p",
-		  myk_index(), cur_th, next_th);
 
 	/* Update __self to point to the new uthread */
 	perthread_store(__self, next_th);
@@ -575,21 +551,18 @@ __always_inline void lame_handle(void)
 	/* Call __lame_jmp_thread_direct to perform context switch */
 	__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
 
+	/* This point is reached when switching back to this thread */
 	/* restore xsave state */
 	__builtin_ia32_xrstor64(xsave_buf, active_xstates); 	
-
-	/* This point is reached when switching back to this thread */
-	log_debug("[LAME][kthread:%d][func:lame_handle] resumed uthread %p",
-		  myk_index(), cur_th);
 }
 
-__always_inline void lame_handle_bret(uint64_t *ret) {
+__always_inline __nofp void lame_handle_bret(uint64_t *ret) {
 
 	log_warn("[LAME][func:lame_handle_bret] ret=0x%lx", *(ret+8));
 
 }
 
-__always_inline void lame_stall(void) {
+__always_inline __nofp void lame_stall(void) {
 
 	struct kthread *k = myk();
 	k->lame_bundle.total_lames++; /* use this field for skipped LAMEs, for now */
@@ -597,7 +570,7 @@ __always_inline void lame_stall(void) {
     _tpause(0, __rdtsc() + 600ULL);
 }
 
-__always_inline void lame_handle_bret_slowpath(void) {
+__always_inline __nofp void lame_handle_bret_slowpath(void) {
 	struct kthread *k;
 	unsigned char *xsave_buf;
 	unsigned long active_xstates;
