@@ -504,6 +504,7 @@ extern thread_t *lame_sched_get_current_uthread(struct kthread *k);
 extern void lame_handle(void);
 extern void lame_handle_ret(uint64_t *ret);
 extern void lame_stall(void);
+extern void lame_handle_bret_slowpath(void);
 
 /* Dynamic bundle scheduling control functions */
 extern void lame_sched_enable(struct kthread *k);

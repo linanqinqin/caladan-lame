@@ -809,3 +809,59 @@ __lame_entry_nop_bret:
 
 	bretq
 
+
+.align 16
+.globl __lame_entry_bret_slowpath
+.type __lame_entry_bret_slowpath, @function
+__lame_entry_bret_slowpath:
+
+	/* save all registers to stack */
+	pushq	%rax
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rsi
+	pushq	%rdi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+	pushq 	%rbx
+	pushq 	%rbp
+	pushq 	%r12
+	pushq 	%r13
+	pushq 	%r14
+	pushq 	%r15
+
+	/* realign stack */
+	movq 	%rsp, %rax
+	andq	$15, %rax
+	cmpq 	$0, %rax
+	je 	1f
+	subq	$8, %rsp
+	call	lame_handle_bret_slowpath
+	addq	$8, %rsp
+	jmp	__lame_entry_bret_slowpath_out
+
+1:
+	call	lame_handle_bret_slowpath
+
+__lame_entry_bret_slowpath_out:
+
+	/* restore all registers from stack */
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbp
+	popq %rbx
+	popq %r11
+	popq %r10
+	popq %r9
+	popq %r8
+	popq %rdi
+	popq %rsi
+	popq %rdx
+	popq %rcx
+	popq %rax
+
+	bretq

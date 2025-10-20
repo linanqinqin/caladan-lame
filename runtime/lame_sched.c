@@ -597,6 +597,50 @@ __always_inline void lame_stall(void) {
     _tpause(0, __rdtsc() + 600ULL);
 }
 
+__always_inline void lame_handle_bret_slowpath(void) {
+	struct kthread *k;
+	unsigned char *xsave_buf;
+	unsigned long active_xstates;
+
+	STAT(PREEMPTIONS)++;
+
+	/* resume execution if preemption is disabled */
+	if (!preempt_enabled()) {
+		set_preempt_needed();
+		return;
+	}
+
+	k = getk();
+
+	bool do_cede = preempt_cede_needed(k);
+	if (!do_cede && !preempt_yield_needed(k)) {
+		putk();
+		return;
+	}
+
+	/* allocate buffer for xsave area on stack */
+	xsave_buf = alloca(xsave_max_size + 64);
+	xsave_buf = (unsigned char *)align_up((uintptr_t)xsave_buf, 64);
+
+	/* zero xsave header */
+	__builtin_memset(xsave_buf + 512, 0, 64);
+
+	active_xstates = __builtin_ia32_xgetbv(1);
+
+	/* save state */
+	__builtin_ia32_xsavec64(xsave_buf, active_xstates);
+
+	if (do_cede) {
+		thread_cede();
+	} else {
+		putk();
+		thread_yield();
+	}
+
+	/* restore state */
+	__builtin_ia32_xrstor64(xsave_buf, active_xstates);
+}
+
 void lame_print_tsc_counters(void)
 {
 	unsigned int i;
