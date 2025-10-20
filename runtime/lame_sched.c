@@ -611,12 +611,6 @@ __always_inline void lame_handle_bret_slowpath(void) {
 
 	k = getk();
 
-	bool do_cede = preempt_cede_needed(k);
-	if (!do_cede && !preempt_yield_needed(k)) {
-		putk();
-		return;
-	}
-
 	/* allocate buffer for xsave area on stack */
 	xsave_buf = alloca(xsave_max_size + 64);
 	xsave_buf = (unsigned char *)align_up((uintptr_t)xsave_buf, 64);
