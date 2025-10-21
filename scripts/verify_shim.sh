@@ -245,7 +245,7 @@ for func in "${SHIM_FUNCTIONS[@]}"; do
         INTERCEPTED_COUNT=$((INTERCEPTED_COUNT + 1))
     elif [ -n "$undefined_info" ]; then
         # Function is undefined (not intercepted)
-        echo "✗ $func - NOT INTERCEPTED (undefined)" >&2
+        echo -e "✗ $func - \033[31mNOT INTERCEPTED (undefined)\033[0m" >&2
         if [ "$VERBOSE" = true ]; then
             echo "    Details: $undefined_info" >&2
         fi
