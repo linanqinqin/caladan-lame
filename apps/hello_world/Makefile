@@ -23,26 +23,34 @@ parse_bundle_obj = $(parse_bundle_src:.c=.o)
 matmul_src = matmul.c
 matmul_obj = $(matmul_src:.c=.o)
 
+# Define target categories
+caladan_targets = hello_world threads network int
+native_targets = parse_lame parse_bundle matmul threads_native
+
 # must be first
-all: hello_world threads network int parse_lame parse_bundle matmul threads_native
+all: $(caladan_targets) $(native_targets)
 
 lib_shim = -Wl,--whole-archive $(ROOT_PATH)/shim/libshim.a -ldl -Wl,--no-whole-archive
 
 hello_world: $(hello_world_obj) $(RUNTIME_DEPS)
 	$(LD) $(LDFLAGS) -o $@ $(hello_world_obj) \
 	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
+	@$(ROOT_PATH)/scripts/verify_shim.sh $@
 
 threads: $(threads_obj) $(RUNTIME_DEPS)
 	$(LD) $(LDFLAGS) -o $@ $(threads_obj) \
 	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
+	@$(ROOT_PATH)/scripts/verify_shim.sh $@
 
 network: $(network_obj) $(RUNTIME_DEPS)
 	$(LD) $(LDFLAGS) -o $@ $(network_obj) \
 	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
+	@$(ROOT_PATH)/scripts/verify_shim.sh $@
 
 int: $(int_obj) $(RUNTIME_DEPS)
 	$(LD) $(LDFLAGS) -o $@ $(int_obj) \
 	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
+	@$(ROOT_PATH)/scripts/verify_shim.sh $@
 
 parse_lame: $(parse_lame_obj)
 	$(CC) $(CFLAGS) -o $@ $(parse_lame_obj)
