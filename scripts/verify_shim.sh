@@ -265,7 +265,7 @@ done
 
 # Sanity check: verify we processed all functions
 if [ $progress_count -ne $TOTAL_FUNCTIONS ]; then
-    echo "ERROR: Script did not process all functions. Expected: $TOTAL_FUNCTIONS, Processed: $progress_count" >&2
+    echo -e "\033[31mERROR\033[0m: Script did not process all functions. Expected: $TOTAL_FUNCTIONS, Processed: $progress_count" >&2
     exit 1
 fi
 
