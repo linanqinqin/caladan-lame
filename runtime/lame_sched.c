@@ -511,32 +511,16 @@ __always_inline __nofp void lame_handle(void)
 	unsigned char *xsave_buf;
 	unsigned long active_xstates;
 
-	/* Check if LAME scheduling is enabled */
-	if (!lame_sched_is_dynamically_enabled(k)) {
-		/* this should not happen */
-		preempt_enable();
-		return;
-	}
-
 	/* If there is only one uthread in the bundle, no need to schedule */
 	if (lame_bundle_get_used_count(k) <= 1) {
 		preempt_enable();
 		return;
 	}
 
-	/* Get current uthread's trapframe */
+	/* Get current and next uthreads from bundle 
+	 * not checking null because that would be a fatal bug anyway */
 	cur_th = lame_sched_get_current_uthread(k);
-	if (!cur_th) {
-		preempt_enable();
-		return;
-	}
-
-	/* Get next uthread from bundle */
 	next_th = lame_sched_get_next_uthread(k);
-	if (!next_th) {
-		preempt_enable();
-		return;
-	}
 
 	/* Update __self to point to the new uthread */
 	perthread_store(__self, next_th);
