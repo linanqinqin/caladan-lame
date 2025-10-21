@@ -26,7 +26,7 @@ matmul_obj = $(matmul_src:.c=.o)
 # must be first
 all: hello_world threads network int parse_lame parse_bundle matmul threads_native
 
-lib_shim = $(ROOT_PATH)/shim/libshim.a -ldl
+lib_shim = -Wl,--whole-archive $(ROOT_PATH)/shim/libshim.a -ldl -Wl,--no-whole-archive
 
 hello_world: $(hello_world_obj) $(RUNTIME_DEPS)
 	$(LD) $(LDFLAGS) -o $@ $(hello_world_obj) \
