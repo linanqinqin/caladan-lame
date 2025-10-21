@@ -175,11 +175,9 @@ SHIM_FUNCTIONS=(
     "pthread_setspecific"
 )
 
-echo "Verifying Caladan shim function interception for: $BINARY_PATH"
-echo "=================================================================="
-
-# Show which functions are actually referenced in the binary
 if [ "$VERBOSE" = true ]; then
+    echo "Verifying Caladan shim function interception for: $BINARY_PATH"
+    echo "=================================================================="
     echo "Functions referenced in binary:"
     nm "$BINARY_PATH" 2>/dev/null | grep -E " [UTtWw] " | grep -E "($(IFS='|'; echo "${SHIM_FUNCTIONS[*]}"))" | sort || true
     echo ""
@@ -197,30 +195,19 @@ INTERCEPTED_COUNT=0
 NOT_INTERCEPTED_COUNT=0
 NOT_FOUND_COUNT=0
 
-echo "Checking $TOTAL_FUNCTIONS shim functions..."
-echo "Symbol types: T=intercepted, U=not intercepted, ?=not found"
-echo ""
-
-# Show progress for large function lists
-if [ $TOTAL_FUNCTIONS -gt 20 ]; then
-    echo "This may take a moment for large binaries..."
+if [ "$VERBOSE" = true ]; then
+    echo "Checking $TOTAL_FUNCTIONS shim functions..."
+    echo "Symbol types: T=intercepted, U=not intercepted, ?=not found"
+    echo ""
+    
+    # Show progress for large function lists
+    if [ $TOTAL_FUNCTIONS -gt 20 ]; then
+        echo "This may take a moment for large binaries..."
+    fi
 fi
 
-# Add a small delay for user experience
-if [ "$VERBOSE" = false ] && [ $TOTAL_FUNCTIONS -gt 10 ]; then
-    echo "Processing..."
-fi
-
-# Show a progress indicator for non-verbose mode
-if [ "$VERBOSE" = false ] && [ $TOTAL_FUNCTIONS -gt 20 ]; then
-    echo "Progress: ["
-    progress_count=0
-fi
-
-# Add a small delay for user experience
-if [ "$VERBOSE" = false ] && [ $TOTAL_FUNCTIONS -gt 10 ]; then
-    sleep 0.1
-fi
+# Initialize progress counter
+progress_count=0
 
 # Check each function
 for func in "${SHIM_FUNCTIONS[@]}"; do
@@ -233,73 +220,73 @@ for func in "${SHIM_FUNCTIONS[@]}"; do
     
     # Escape the function name for regex
     escaped_func=$(echo "$func" | sed 's/[[\.*^$()+?{|]/\\&/g')
-    symbol_info=$(nm "$BINARY_PATH" 2>/dev/null | grep -E " [TtWw] $escaped_func$" || true)
-    undefined_info=$(nm "$BINARY_PATH" 2>/dev/null | grep -E " U $escaped_func$" || true)
+    
+    # Run nm command and capture any errors
+    nm_output=$(nm "$BINARY_PATH" 2>&1 || echo "nm_error")
+    if [ "$nm_output" = "nm_error" ]; then
+        echo "? $func - ERROR (nm command failed)" >&2
+        if [ "$VERBOSE" = true ]; then
+            echo "    nm command failed for this function" >&2
+        fi
+        NOT_FOUND_COUNT=$((NOT_FOUND_COUNT + 1))
+        continue
+    fi
+    
+    symbol_info=$(echo "$nm_output" | grep -E " [TtWw] $escaped_func(@|$)" || true)
+    undefined_info=$(echo "$nm_output" | grep -E " U $escaped_func(@|$)" || true)
     
     if [ -n "$symbol_info" ]; then
         # Function is defined (intercepted)
-        symbol_type=$(echo "$symbol_info" | awk '{print $2}')
+        symbol_type=$(echo "$symbol_info" | awk '{print $2}' 2>/dev/null || echo "T")
         if [ "$VERBOSE" = true ]; then
             echo "✓ $func - INTERCEPTED ($symbol_type)"
             echo "    Details: $symbol_info"
-        else
-            echo "✓ $func - INTERCEPTED ($symbol_type)"
         fi
-        ((INTERCEPTED_COUNT++))
+        INTERCEPTED_COUNT=$((INTERCEPTED_COUNT + 1))
     elif [ -n "$undefined_info" ]; then
         # Function is undefined (not intercepted)
+        echo "✗ $func - NOT INTERCEPTED (undefined)" >&2
         if [ "$VERBOSE" = true ]; then
-            echo "✗ $func - NOT INTERCEPTED (undefined)"
-            echo "    Details: $undefined_info"
-        else
-            echo "✗ $func - NOT INTERCEPTED (undefined)"
+            echo "    Details: $undefined_info" >&2
         fi
-        ((NOT_INTERCEPTED_COUNT++))
+        NOT_INTERCEPTED_COUNT=$((NOT_INTERCEPTED_COUNT + 1))
     else
         # Function not found in symbol table
+        echo "? $func - NOT FOUND" >&2
         if [ "$VERBOSE" = true ]; then
-            echo "? $func - NOT FOUND"
-            echo "    No symbol found in binary (may be inlined or unused)"
-        else
-            echo "? $func - NOT FOUND"
+            echo "    No symbol found in binary (may be inlined or unused)" >&2
         fi
-        ((NOT_FOUND_COUNT++))
+        NOT_FOUND_COUNT=$((NOT_FOUND_COUNT + 1))
     fi
     
-    # Update progress indicator
-    if [ "$VERBOSE" = false ] && [ $TOTAL_FUNCTIONS -gt 20 ]; then
-        ((progress_count++))
-        if [ $((progress_count % 5)) -eq 0 ]; then
-            echo -n "."
-        fi
-    fi
+    # Update progress counter
+    progress_count=$((progress_count + 1))
 done
 
-# Complete progress indicator
-if [ "$VERBOSE" = false ] && [ $TOTAL_FUNCTIONS -gt 20 ]; then
-    echo "]"
+# Sanity check: verify we processed all functions
+if [ $progress_count -ne $TOTAL_FUNCTIONS ]; then
+    echo "ERROR: Script did not process all functions. Expected: $TOTAL_FUNCTIONS, Processed: $progress_count" >&2
+    exit 1
 fi
 
-echo ""
-echo "=================================================================="
-echo "SUMMARY:"
-echo "  Total functions checked: $TOTAL_FUNCTIONS"
-echo "  Intercepted (T/t/W/w): $INTERCEPTED_COUNT"
-echo "  Not intercepted (U): $NOT_INTERCEPTED_COUNT"
-echo "  Not found: $NOT_FOUND_COUNT"
-echo ""
+# Only show summary if verbose
+if [ "$VERBOSE" = true ]; then
+    echo ""
+    echo "=================================================================="
+    echo "SUMMARY:"
+    echo "  Total functions checked: $TOTAL_FUNCTIONS"
+    echo "  Intercepted (T/t/W/w): $INTERCEPTED_COUNT"
+    echo "  Not intercepted (U): $NOT_INTERCEPTED_COUNT"
+    echo "  Not found: $NOT_FOUND_COUNT"
+    echo ""
+fi
 
 # Determine overall status
 if [ $NOT_INTERCEPTED_COUNT -eq 0 ] && [ $NOT_FOUND_COUNT -eq 0 ]; then
-    echo "✓ ALL SHIM FUNCTIONS ARE CORRECTLY INTERCEPTED"
     exit 0
 elif [ $NOT_INTERCEPTED_COUNT -gt 0 ]; then
-    echo "✗ SOME FUNCTIONS ARE NOT INTERCEPTED"
-    echo "  This indicates that the shim layer is not working correctly"
     exit 1
 else
-    echo "⚠ SOME FUNCTIONS WERE NOT FOUND IN SYMBOL TABLE"
-    echo "  This might be normal if the binary doesn't use all functions"
-    echo "  Use --verbose to see which functions are actually referenced"
+    # Silent success for not found functions (may be normal)
     exit 0
 fi
