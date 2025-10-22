@@ -235,9 +235,6 @@ __always_inline __nofp static thread_t *lame_sched_get_next_uthread(struct kthre
 		unsigned int idx = (start_idx + i) % bundle->size;
 		if (bundle->uthreads[idx].present) {
 			bundle->active = idx;
-			bundle->total_lames++;
-			bundle->uthreads[idx].lame_count++;
-			
 			return bundle->uthreads[idx].uthread;
 		}
 	}
@@ -254,7 +251,7 @@ __always_inline __nofp static thread_t *lame_sched_get_next_uthread(struct kthre
 __always_inline __nofp static thread_t *lame_sched_get_next_idx_uthread(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
-	return bundle->uthreads[(++bundle->active) % bundle->size].uthread;
+	return bundle->uthreads[(++bundle->active) % bundle->used].uthread;
 }
 
 /**
