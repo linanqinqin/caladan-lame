@@ -489,17 +489,18 @@ __lame_entry_bret:
 	jz	1f
 	bretq
 
+1:
 	/* if preemption is already disabled, this means that Caladan scheduling is happening. 
 	 * we cannot make a LAME switch; this must be a full stall.
 	 */
 	testl   $0x7fffffff, %gs:__perthread_preempt_cnt(%rip)
-	jz	1f
+	jz	2f
 	pushcallerregs
 	call	lame_stall
 	popcallerregs
 	bretq
 
-1:
+2:
 	/* enter in_lame */
 	addb	$1, %gs:__perthread_in_lame(%rip)
 	/* Disable preemption to protect LAME context switch atomicity */
