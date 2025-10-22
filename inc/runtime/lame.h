@@ -19,8 +19,6 @@ extern void lame_sched_bundle_dismantle(struct kthread *k);
 extern void lame_sched_bundle_dismantle_nolock(struct kthread *k);
 
 /* LAME scheduling functions */
-extern thread_t *lame_sched_get_next_uthread(struct kthread *k);
-extern thread_t *lame_sched_get_current_uthread(struct kthread *k);
 extern void lame_handle(void);
 extern void lame_handle_bret(uint64_t *ret);
 extern void lame_stall(void);

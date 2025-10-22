@@ -223,7 +223,7 @@ __always_inline __nofp unsigned int lame_bundle_get_used_count(struct kthread *k
  * Returns the next uthread to run, or NULL if none available.
  * The active field in the bundle represents the currently running uthread.
  */
-__always_inline __nofp thread_t *lame_sched_get_next_uthread(struct kthread *k)
+__always_inline __nofp static thread_t *lame_sched_get_next_uthread(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 	unsigned int start_idx, i;
@@ -246,13 +246,25 @@ __always_inline __nofp thread_t *lame_sched_get_next_uthread(struct kthread *k)
 }
 
 /**
+ * lame_sched_get_next_idx_uthread - fast path to get the next uthread to run
+ * @k: the kthread
+ *
+ * this function assumes that a bundle is filled to the first bundle.size slots 
+ */
+__always_inline __nofp static thread_t *lame_sched_get_next_idx_uthread(struct kthread *k)
+{
+	struct lame_bundle *bundle = &k->lame_bundle;
+	return bundle->uthreads[(++bundle->active) % bundle->size].uthread;
+}
+
+/**
  * lame_sched_get_current_uthread - gets the currently active uthread
  * @k: the kthread
  *
  * Returns the currently active uthread, or NULL if none.
  * The active field in the bundle represents the currently running uthread.
  */
-__always_inline __nofp thread_t *lame_sched_get_current_uthread(struct kthread *k)
+__always_inline __nofp static thread_t *lame_sched_get_current_uthread(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
 
@@ -520,7 +532,7 @@ __always_inline __nofp void lame_handle(void)
 	/* Get current and next uthreads from bundle 
 	 * not checking null because that would be a fatal bug anyway */
 	cur_th = lame_sched_get_current_uthread(k);
-	next_th = lame_sched_get_next_uthread(k);
+	next_th = lame_sched_get_next_idx_uthread(k);
 
 	/* Update __self to point to the new uthread */
 	perthread_store(__self, next_th);
