@@ -251,7 +251,7 @@ __always_inline __nofp static thread_t *lame_sched_get_next_uthread(struct kthre
 __always_inline __nofp static thread_t *lame_sched_get_next_idx_uthread(struct kthread *k)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
-	return bundle->uthreads[(++bundle->active) % bundle->used].uthread;
+	return bundle->uthreads[(++(bundle->active)) % bundle->used].uthread;
 }
 
 /**
