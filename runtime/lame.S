@@ -19,6 +19,37 @@
     retq
 .endm
 
+/* 
+ * pushcallerregs - push all caller-saved registers to stack; must be used in pair with popcallerregs
+ */
+.macro pushcallerregs
+	pushq	%rax
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rsi
+	pushq	%rdi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+.endm
+
+/* 
+ * popcallerregs - pop all caller-saved registers from stack; must be used in pair with pushcallerregs
+ */
+.macro popcallerregs
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdi
+	popq	%rsi
+	popq	%rdx
+	popq	%rcx
+	popq	%rax
+.endm
+
+
 /**
  * __lame_jmp_thread_direct - LAME-specific context switch without preemption
  * @oldtf: the trap frame to save (%rdi)
@@ -91,29 +122,13 @@ __lame_entry:
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
 	/* Save volatile registers to stack */
-	pushq	%rax
-	pushq	%rcx
-	pushq	%rdx
-	pushq	%rsi
-	pushq	%rdi
-	pushq	%r8
-	pushq	%r9
-	pushq	%r10
-	pushq	%r11
+	pushcallerregs
 
 	/* Call C wrapper function to handle LAME logic */
 	call	lame_handle
 
 	/* Restore volatile registers from stack */
-	popq	%r11
-	popq	%r10
-	popq	%r9
-	popq	%r8
-	popq	%rdi
-	popq	%rsi
-	popq	%rdx
-	popq	%rcx
-	popq	%rax
+	popcallerregs
 
 	/* Return from LAME exception */
 	iretq
@@ -357,15 +372,7 @@ __lame_entry2_pretend:
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
 	/* Save volatile registers to stack */
-	pushq	%rax
-	pushq	%rcx
-	pushq	%rdx
-	pushq	%rsi
-	pushq	%rdi
-	pushq	%r8
-	pushq	%r9
-	pushq	%r10
-	pushq	%r11
+	pushcallerregs
 
 	/* Get current kthread from perthread storage */
 	movq	%gs:__perthread_mykthread(%rip), %r8
@@ -460,15 +467,7 @@ __lame_entry2_pretend:
 .lame_entry2_pretend_exit: 
 
 	/* Restore volatile registers from stack */
-	popq	%r11
-	popq	%r10
-	popq	%r9
-	popq	%r8
-	popq	%rdi
-	popq	%rsi
-	popq	%rdx
-	popq	%rcx
-	popq	%rax
+	popcallerregs
 
 	/* Return from LAME exception */
 	iretq
@@ -495,7 +494,9 @@ __lame_entry_bret:
 	 */
 	testl   $0x7fffffff, %gs:__perthread_preempt_cnt(%rip)
 	jz	1f
-	/* if preemption is already disabled, just return */
+	pushcallerregs
+	call	lame_stall
+	popcallerregs
 	bretq
 
 1:
@@ -505,15 +506,7 @@ __lame_entry_bret:
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
 	/* Save volatile registers to stack */
-	pushq	%rax
-	pushq	%rcx
-	pushq	%rdx
-	pushq	%rsi
-	pushq	%rdi
-	pushq	%r8
-	pushq	%r9
-	pushq	%r10
-	pushq	%r11
+	pushcallerregs
 
 	call	lame_handle
 
@@ -522,15 +515,7 @@ __lame_entry_bret_out:
 	/* enter in_lame */
 	addb	$1, %gs:__perthread_in_lame(%rip)
 	/* Restore volatile registers from stack */
-	popq	%r11
-	popq	%r10
-	popq	%r9
-	popq	%r8
-	popq	%rdi
-	popq	%rsi
-	popq	%rdx
-	popq	%rcx
-	popq	%rax
+	popcallerregs
 	/* exit in_lame */
 	subb	$1, %gs:__perthread_in_lame(%rip)
 
@@ -558,29 +543,13 @@ __lame_entry2_bret:
 	jz	1f
 	/* if preemption is already disabled, just return */
 	/* Save volatile registers to stack */
-	pushq	%rax
-	pushq	%rcx
-	pushq	%rdx
-	pushq	%rsi
-	pushq	%rdi
-	pushq	%r8
-	pushq	%r9
-	pushq	%r10
-	pushq	%r11
+	pushcallerregs
 
 	/* perform a full stall */
 	call	lame_stall
 
 	/* Restore volatile registers from stack */
-	popq	%r11
-	popq	%r10
-	popq	%r9
-	popq	%r8
-	popq	%rdi
-	popq	%rsi
-	popq	%rdx
-	popq	%rcx
-	popq	%rax
+	popcallerregs
 	bretq
 
 1:
