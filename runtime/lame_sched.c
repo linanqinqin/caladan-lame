@@ -273,6 +273,18 @@ __always_inline __nofp static thread_t *lame_sched_get_current_uthread(struct kt
 }
 
 /**
+ * lame_sched_get_current_uthread_nocheck - gets the currently active uthread without checking if it is present
+ * @k: the kthread
+ *
+ * Returns the currently active uthread.
+ */
+ __always_inline __nofp static thread_t *lame_sched_get_current_uthread_nocheck(struct kthread *k)
+ {
+	struct lame_bundle *bundle = &k->lame_bundle;
+	return bundle->uthreads[bundle->active].uthread;
+ }
+
+/**
  * lame_sched_is_enabled - checks if bundle scheduling is enabled
  * @k: the kthread
  *
@@ -528,7 +540,7 @@ __always_inline __nofp void lame_handle(void)
 
 	/* Get current and next uthreads from bundle 
 	 * not checking null because that would be a fatal bug anyway */
-	cur_th = lame_sched_get_current_uthread(k);
+	cur_th = lame_sched_get_current_uthread_nocheck(k);
 	next_th = lame_sched_get_next_idx_uthread(k);
 
 	/* Update __self to point to the new uthread */
