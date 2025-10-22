@@ -64,6 +64,8 @@ __lame_jmp_thread_direct:
 
 	/* re-enable preemption after context switch is complete */
 	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+	/* exit in_lame */
+	subb	$1, %gs:__perthread_in_lame(%rip)
 
 	/* jump into trap frame */
 	jmpq	*%r8
@@ -482,9 +484,14 @@ __lame_entry2_pretend:
 .type __lame_entry_bret, @function
 __lame_entry_bret:
 
-	/* check if preemption is already disabled. This usually indiates that either:
-	 * 1. regular scheduling is happening
-	 * 2. a LAME handler is already running 
+	/* check is we are already in a LAME handler context (in_lame > 0) 
+	 * if so, just return, since we assume the handler resides in DRAM */
+	testb	$0xff, %gs:__perthread_in_lame(%rip)
+	jz	1f
+	bretq
+
+	/* if preemption is already disabled, this means that Caladan scheduling is happening. 
+	 * we cannot make a LAME switch; this must be a full stall.
 	 */
 	testl   $0x7fffffff, %gs:__perthread_preempt_cnt(%rip)
 	jz	1f
@@ -492,6 +499,8 @@ __lame_entry_bret:
 	bretq
 
 1:
+	/* enter in_lame */
+	addb	$1, %gs:__perthread_in_lame(%rip)
 	/* Disable preemption to protect LAME context switch atomicity */
 	addl	$1, %gs:__perthread_preempt_cnt(%rip)
 
@@ -510,6 +519,8 @@ __lame_entry_bret:
 
 __lame_entry_bret_out:
 
+	/* enter in_lame */
+	addb	$1, %gs:__perthread_in_lame(%rip)
 	/* Restore volatile registers from stack */
 	popq	%r11
 	popq	%r10
@@ -520,6 +531,8 @@ __lame_entry_bret_out:
 	popq	%rdx
 	popq	%rcx
 	popq	%rax
+	/* exit in_lame */
+	subb	$1, %gs:__perthread_in_lame(%rip)
 
 	/* Return from LAME */
 	bretq

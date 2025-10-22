@@ -13,6 +13,7 @@
 #include "defs.h"
 
 DEFINE_PERTHREAD(uint64_t, lame_scratch);
+DEFINE_PERTHREAD(uint8_t, in_lame);
 
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
