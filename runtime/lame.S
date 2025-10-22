@@ -506,23 +506,6 @@ __lame_entry_bret:
 	pushq	%r10
 	pushq	%r11
 
-	/* set first argument to the top of the stack */
-	// movq	%rsp, %rdi
-	// addq	$8*9, %rdi
-
-	/* realign stack */
-	movq 	%rsp, %rax
-	andq	$15, %rax
-	cmpq 	$0, %rax
-	je 	2f
-	subq	$8, %rsp
-	// call	lame_handle_bret
-	call	lame_handle
-	addq	$8, %rsp
-	jmp	__lame_entry_bret_out
-
-2:
-	// call	lame_handle_bret
 	call	lame_handle
 
 __lame_entry_bret_out:
