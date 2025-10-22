@@ -530,6 +530,7 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
  * 4. Get next uthread from bundle
  * 5. Call __jmp_thread_direct to perform context switch
  */
+__attribute__((optimize("O3")))
 __always_inline __nofp void lame_handle(void)
 {
 	struct kthread *k = myk();
