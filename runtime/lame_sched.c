@@ -15,6 +15,9 @@
 DEFINE_PERTHREAD(uint64_t, lame_scratch);
 DEFINE_PERTHREAD(uint8_t, in_lame);
 
+DEFINE_PERTHREAD(uint64_t, lame_counter_in_lame);
+DEFINE_PERTHREAD(uint64_t, lame_counter_in_preempt);
+
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
 
@@ -633,9 +636,10 @@ void lame_print_tsc_counters(void)
 		struct kthread *k = ks[i];
 		if (!k)
 			continue;
-		log_warn("[LAME][TSC][kthread:%u] avg_cycles=%lu total_cycles=%lu total_lames=%lu", i,
+		log_warn("[LAME][TSC][kthread:%u] avg_cycles=%lu; total_cycles=%lu; total_lames=%lu; skip=%lu; stall=%lu", i,
 				 k->lame_bundle.total_lames? k->lame_bundle.total_cycles / k->lame_bundle.total_lames : 0, 
-				 k->lame_bundle.total_cycles, k->lame_bundle.total_lames);
+				 k->lame_bundle.total_cycles, k->lame_bundle.total_lames,
+				 perthread_read(lame_counter_in_lame), perthread_read(lame_counter_in_preempt));
 	}
 }
 /* end */

@@ -487,6 +487,7 @@ __lame_entry_bret:
 	 * if so, just return, since we assume the handler resides in DRAM */
 	testb	$0xff, %gs:__perthread_in_lame(%rip)
 	jz	1f
+	incq	%gs:__perthread_lame_counter_in_lame(%rip)
 	bretq
 
 1:
@@ -496,6 +497,7 @@ __lame_entry_bret:
 	testl   $0x7fffffff, %gs:__perthread_preempt_cnt(%rip)
 	jz	2f
 	pushcallerregs
+	incq	%gs:__perthread_lame_counter_in_preempt(%rip)
 	call	lame_stall
 	popcallerregs
 	bretq
