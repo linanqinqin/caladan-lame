@@ -49,6 +49,25 @@
 	popq	%rax
 .endm
 
+/* 
+ * lame_in/out - mark in/out of LAME handler context
+ */
+.macro lame_in 
+	addb	$1, %gs:__perthread_in_lame(%rip)
+.endm
+.macro lame_out
+	subb	$1, %gs:__perthread_in_lame(%rip)
+.endm
+
+/* 
+ * preempt_on/off - enable/disable preemption
+ */
+.macro preempt_off
+	addl	$1, %gs:__perthread_preempt_cnt(%rip)
+.endm
+.macro preempt_on
+	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+.endm
 
 /**
  * __lame_jmp_thread_direct - LAME-specific context switch without preemption
@@ -94,9 +113,9 @@ __lame_jmp_thread_direct:
 	movq    RDI(%rsi), %rdi /* ARG0 */
 
 	/* re-enable preemption after context switch is complete */
-	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_on
 	/* exit in_lame */
-	subb	$1, %gs:__perthread_in_lame(%rip)
+	lame_out
 
 	/* jump into trap frame */
 	jmpq	*%r8
@@ -119,7 +138,7 @@ __lame_entry:
 	/* no need to check if preemption is already disabled, because INT 0x1f is never called in Caladan scheduler context */
 
 	/* Disable preemption to protect LAME context switch atomicity */
-	addl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_off
 
 	/* Save volatile registers to stack */
 	pushcallerregs
@@ -162,7 +181,7 @@ __lame_entry2:
 	/* no need to check if preemption is already disabled, because INT 0x1f is never called in Caladan scheduler context */
 
 	/* Disable preemption to protect LAME context switch atomicity */
-	addl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_off
 
 	/* Save volatile registers to stack */
 	pushq	%rax
@@ -369,7 +388,7 @@ __lame_entry2_pretend:
 	/* no need to check if preemption is already disabled, because INT 0x1f is never called in Caladan scheduler context */
 
 	/* Disable preemption to protect LAME context switch atomicity */
-	addl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_off
 
 	/* Save volatile registers to stack */
 	pushcallerregs
@@ -454,14 +473,14 @@ __lame_entry2_pretend:
 	addq	$1, LAME_BUNDLE_OFFSET + LAME_BUNDLE_TOTAL_LAMES(%r8) /* increment total_lames */
 
 	/* Re-enable preemption after context switch is complete */
-	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_on
 
 	/* Jump into next thread's trapframe */
 	jmpq	*%r9
 
 .lame_entry2_pretend_noswitch:
 	/* Re-enable preemption after context switch is complete */
-	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_on
 
 /* This point is reached when switching back to this thread */
 .lame_entry2_pretend_exit: 
@@ -503,26 +522,17 @@ __lame_entry_bret:
 	bretq
 
 2:
-	/* enter in_lame */
-	addb	$1, %gs:__perthread_in_lame(%rip)
-	/* Disable preemption to protect LAME context switch atomicity */
-	addl	$1, %gs:__perthread_preempt_cnt(%rip)
-
-	/* Save volatile registers to stack */
-	pushcallerregs
-
+	lame_in 	/* enter in_lame */
+	preempt_off /* disable preemption to protect LAME context switch atomicity */
+	
+	pushcallerregs /* save volatile registers to stack */
 	call	lame_handle
 
 __lame_entry_bret_out:
+	lame_in /* enter in_lame */
+	popcallerregs /* restore volatile registers from stack */
+	lame_out /* exit in_lame */
 
-	/* enter in_lame */
-	addb	$1, %gs:__perthread_in_lame(%rip)
-	/* Restore volatile registers from stack */
-	popcallerregs
-	/* exit in_lame */
-	subb	$1, %gs:__perthread_in_lame(%rip)
-
-	/* Return from LAME */
 	bretq
 
 
@@ -557,7 +567,7 @@ __lame_entry2_bret:
 
 1:
 	/* Disable preemption to protect LAME context switch atomicity */
-	addl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_off
 
 	/* save rax to LAME scratch space; load __self into rax */
 	movq	%rax, %gs:__perthread_lame_scratch(%rip)
@@ -642,14 +652,14 @@ __lame_entry2_bret:
 	movq	THREAD_TF_OFFSET + RDI(%r11), %rdi	/* ARG0 */
 
 	/* Re-enable preemption after context switch is complete */
-	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_on
 
 	/* Jump into next thread's trapframe */
 	jmpq	*%r9
 
 .lame_entry2_bret_noswitch:
 	/* Re-enable preemption after context switch is complete */
-	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_on
 
 /* This point is reached when switching back to this thread */
 .lame_entry2_bret_exit: 
@@ -691,7 +701,7 @@ __lame_entry_stall_bret:
 
 1:
 	/* Disable preemption */
-	addl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_off
 
 	/* save r8 to LAME scratch space; load __self into r8 */
 	movq	%r8, %gs:__perthread_lame_scratch(%rip)
@@ -744,7 +754,7 @@ __lame_entry_stall_bret:
 	movq 	%gs:__perthread_lame_scratch(%rip), %r8
 
 	/* Re-enable preemption */
-	subl	$1, %gs:__perthread_preempt_cnt(%rip)
+	preempt_on
 
 	/* Return from LAME */
 	bretq
