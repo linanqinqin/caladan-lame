@@ -543,7 +543,7 @@ __always_inline __nofp void lame_handle(void)
 	unsigned long active_xstates;
 
 	/* If there is only one uthread in the bundle, no need to schedule */
-	if (lame_bundle_get_used_count(k) <= 1) {
+	if (unlikely(lame_bundle_get_used_count(k) <= 1)) {
 		preempt_enable();
 		return;
 	}
