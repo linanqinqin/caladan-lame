@@ -610,7 +610,7 @@ __always_inline __nofp void lame_handle_bret_slowpath(void) {
 	/* zero xsave header */
 	__builtin_memset(xsave_buf + 512, 0, 64);
 
-	active_xstates = __builtin_ia32_xgetbv(1);
+	active_xstates = __builtin_ia32_xgetbv(0);
 
 	/* save state */
 	__builtin_ia32_xsavec64(xsave_buf, active_xstates);
