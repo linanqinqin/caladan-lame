@@ -50,6 +50,26 @@
 .endm
 
 /* 
+ * pushcallee/popcallee - push/pop callee-saved registers to stack 
+ */
+.macro pushcallee 
+	pushq	%rbx
+	pushq	%rbp
+	pushq	%r12
+	pushq	%r13
+	pushq	%r14
+	pushq	%r15
+.endm
+.macro popcallee
+	popq	%r15
+	popq	%r14
+	popq	%r13
+	popq	%r12
+	popq	%rbp
+	popq	%rbx
+.endm
+
+/* 
  * lame_in/out - mark in/out of LAME handler context
  */
 .macro lame_in 
@@ -780,21 +800,8 @@ __lame_entry_nop_bret:
 __lame_entry_bret_slowpath:
 
 	/* save all registers to stack */
-	pushq	%rax
-	pushq	%rcx
-	pushq	%rdx
-	pushq	%rsi
-	pushq	%rdi
-	pushq	%r8
-	pushq	%r9
-	pushq	%r10
-	pushq	%r11
-	pushq 	%rbx
-	pushq 	%rbp
-	pushq 	%r12
-	pushq 	%r13
-	pushq 	%r14
-	pushq 	%r15
+	pushcallerregs
+	pushcallee
 
 	/* realign stack */
 	movq 	%rsp, %rax
@@ -812,20 +819,7 @@ __lame_entry_bret_slowpath:
 __lame_entry_bret_slowpath_out:
 
 	/* restore all registers from stack */
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbp
-	popq %rbx
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rdi
-	popq %rsi
-	popq %rdx
-	popq %rcx
-	popq %rax
+	popcallee
+	popcallerregs
 
 	bretq
