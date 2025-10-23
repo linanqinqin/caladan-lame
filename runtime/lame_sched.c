@@ -13,10 +13,10 @@
 #include "defs.h"
 
 DEFINE_PERTHREAD(uint64_t, lame_scratch);
-DEFINE_PERTHREAD(uint8_t, in_lame);
+DEFINE_PERTHREAD(uint8_t, in_lame) = 0;
 
-DEFINE_PERTHREAD(uint64_t, lame_counter_in_lame);
-DEFINE_PERTHREAD(uint64_t, lame_counter_in_preempt);
+DEFINE_PERTHREAD(uint64_t, lame_counter_in_lame) = 0;
+DEFINE_PERTHREAD(uint64_t, lame_counter_in_preempt) = 0;
 
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
@@ -545,6 +545,7 @@ __always_inline __nofp void lame_handle(void)
 	/* If there is only one uthread in the bundle, no need to schedule */
 	if (unlikely(lame_bundle_get_used_count(k) <= 1)) {
 		preempt_enable();
+		perthread_decr(lame_counter_in_lame);
 		return;
 	}
 
