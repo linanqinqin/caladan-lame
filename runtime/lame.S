@@ -17,6 +17,7 @@
 .macro bretq
     popfq
     retq
+    ud2
 .endm
 
 /* 
@@ -525,34 +526,37 @@ __lame_entry_bret:
 	/* check is we are already in a LAME handler context (in_lame > 0) 
 	 * if so, just return, since we assume the handler resides in DRAM */
 	testb	$0xff, %gs:__perthread_in_lame(%rip)
-	jz	1f
-	incq	%gs:__perthread_lame_counter_in_lame(%rip)
-	bretq
+	jnz	1f
 
-1:
 	/* if preemption is already disabled, this means that Caladan scheduling is happening. 
 	 * we cannot make a LAME switch; this must be a full stall.
 	 */
 	testl   $0x7fffffff, %gs:__perthread_preempt_cnt(%rip)
-	jz	2f
-	pushcallerregs
-	incq	%gs:__perthread_lame_counter_in_preempt(%rip)
-	call	lame_stall
-	popcallerregs
-	bretq
+	jnz	2f
 
-2:
+	/* now we do LAME switch */
 	lame_in 	/* enter in_lame */
 	preempt_off /* disable preemption to protect LAME context switch atomicity */
 	
 	pushcallerregs /* save volatile registers to stack */
 	call	lame_handle
 
-__lame_entry_bret_out:
+	/* this point is reached when this uthread is switched out and then back in by LAME */
 	lame_in /* enter in_lame */
 	popcallerregs /* restore volatile registers from stack */
 	lame_out /* exit in_lame */
 
+	bretq
+
+1:  /* already in LAME context */
+	incq	%gs:__perthread_lame_counter_in_lame(%rip)
+	bretq
+
+2:  /* preemption is already disabled */
+	pushcallerregs
+	incq	%gs:__perthread_lame_counter_in_preempt(%rip)
+	call	lame_stall
+	popcallerregs
 	bretq
 
 
