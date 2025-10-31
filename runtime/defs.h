@@ -500,7 +500,7 @@ extern void lame_bundle_set_running_true_all(struct kthread *k);
 extern void lame_print_tsc_counters(void);
 
 /* LAME scheduling functions */
-extern void lame_handle(void);
+extern void lame_handle(uint64_t rip);
 extern void lame_handle_ret(uint64_t *ret);
 extern void lame_stall(void);
 extern void lame_handle_bret_slowpath(void);
