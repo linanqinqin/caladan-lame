@@ -74,15 +74,12 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th, bool set_active)
 	unsigned int i;
 	int first_empty_slot = -1;
 
-	log_debug("[LAME][kthread:%d][func:lame_bundle_add_uthread] adding uthread %p (set_active=%d)",
-			myk_index(), th, set_active);
-
 	/* Iterate through the bundle to check for duplicates and find first empty slot */
 	for (i = 0; i < bundle->size; i++) {
 		if (bundle->uthreads[i].present) {
 			/* Check for duplicate */
 			if (bundle->uthreads[i].uthread == th) {
-					log_warn("[LAME]: attempted to add duplicate uthread %p to bundle (kthread %d)",
+					log_err("[LAME]: attempted to add duplicate uthread %p to bundle (kthread %d)",
 				 th, myk_index());
 				return 0; /* Return gracefully, no error */
 			}
@@ -96,8 +93,6 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th, bool set_active)
 
 	/* Check if we found an empty slot */
 	if (first_empty_slot == -1) {
-		log_debug("[LAME]: bundle is full, cannot add uthread %p (kthread %d)",
-		 th, myk_index());
 		return -ENOSPC;
 	}
 
@@ -111,8 +106,6 @@ int lame_bundle_add_uthread(struct kthread *k, thread_t *th, bool set_active)
 	/* If this is the uthread that will run next, update the active index */
 	if (set_active) {
 		bundle->active = first_empty_slot;
-		log_debug("[LAME][kthread:%d][func:lame_bundle_add_uthread] set active index to %d for uthread %p",
-				myk_index(), first_empty_slot, th);
 	}
 	
 	return 0;
@@ -133,9 +126,6 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 	/* Find the uthread in the bundle */
 	for (i = 0; i < bundle->size; i++) {
 		if (bundle->uthreads[i].present && bundle->uthreads[i].uthread == th) {
-	
-			log_debug("[LAME][kthread:%d][uthread:%p][func:lame_bundle_remove_uthread] removing uthread at index %u",
-					myk_index(), th, i);
 
 			bundle->uthreads[i].present = false;
 			bundle->uthreads[i].uthread = NULL;
@@ -145,8 +135,6 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 		}
 	}
 
-	log_debug("[LAME][kthread:%d][uthread:%p][func:lame_bundle_remove_uthread] uthread not found",
-			myk_index(), th);
 	return -ENOENT;
 }
 
@@ -160,9 +148,6 @@ int lame_bundle_remove_uthread(struct kthread *k, thread_t *th)
 int lame_bundle_remove_uthread_by_index(struct kthread *k, unsigned int index)
 {
 	struct lame_bundle *bundle = &k->lame_bundle;
-
-	log_debug("[LAME][kthread:%d][func:lame_bundle_remove_uthread_by_index] removing uthread at index %u",
-			myk_index(), index);
 
 	if (index >= bundle->size) {
 		log_err("[LAME][kthread:%d][func:lame_bundle_remove_uthread_by_index] index %u out of bounds",
@@ -193,9 +178,6 @@ int lame_bundle_remove_uthread_at_active(struct kthread *k)
 	unsigned int active = bundle->active;
 	
 	if (bundle->uthreads[active].present) {
-	
-		log_debug("[LAME][kthread:%d][uthread:%p][func:lame_bundle_remove_uthread_at_active] removing uthread at active index %u",
-			myk_index(), bundle->uthreads[active].uthread, active);
 
 		bundle->uthreads[active].present = false;
 		bundle->uthreads[active].uthread = NULL;
@@ -203,8 +185,6 @@ int lame_bundle_remove_uthread_at_active(struct kthread *k)
 		return 0;
 	}
 	else {
-		log_debug("[LAME][kthread:%d][func:lame_bundle_remove_uthread_at_active] uthread at active index %u not present",
-			myk_index(), active);
 		return -ENOENT;
 	}
 }
