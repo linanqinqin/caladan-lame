@@ -572,9 +572,11 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 		/* Call __lame_jmp_thread_direct to perform context switch */
 		__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
 
+		tsc_start = __rdtsc();
 		/* This point is reached when switching back to this thread */
 		/* restore xsave state */
 		__builtin_ia32_xrstor64(xsave_buf, active_xstates); 	
+		k->lame_bundle.total_cycles += __rdtsc() - tsc_start;
 	}	
 	else {
 		/* Call __lame_jmp_thread_direct to perform context switch */
