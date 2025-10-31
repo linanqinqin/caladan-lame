@@ -280,7 +280,8 @@ static int avx_bitmap_init()
             for (uint64_t p = start_idx; p <= end_idx; p++) bitmap[p] = 1;
         }
 		
-        log_info("[LAME] avx bitmap has %lu pages, page size = %lu", num_pages, page_size);
+        log_info("[LAME] avx bitmap has %lu pages, page size = %lu, start = 0x%lx, end = 0x%lx", 
+				num_pages, page_size, text_start, text_end);
 		avx_bitmap = bitmap;
 		avx_bitmap_start = text_start;
 		avx_bitmap_end = text_end;
