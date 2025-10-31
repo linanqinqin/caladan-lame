@@ -530,11 +530,11 @@ extern uint64_t avx_bitmap_size;
 extern unsigned char *avx_bitmap;
 static __always_inline __nofp bool needs_xsave(uint64_t rip) 
 {
-	uint64_t page_idx = (rip - avx_bitmap_start) / cfg_lame_avx_page_size;
-	if (page_idx >= avx_bitmap_size) {
+	if (rip < avx_bitmap_start || rip >= avx_bitmap_end) {
 		/* rip is not in the bitmap range; xsave by default */
 		return true;
 	}
+	uint64_t page_idx = (rip - avx_bitmap_start) >> 6; /* 64 bytes per page */
 	return avx_bitmap[page_idx];
 }
 
