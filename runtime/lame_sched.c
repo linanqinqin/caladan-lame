@@ -561,7 +561,7 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 		xsave_buf = alloca(xsave_max_size + 64); 	/* allocate buffer for xsave area on stack */
 		xsave_buf = (unsigned char *)align_up((uintptr_t)xsave_buf, 64); 	/* align to 64 bytes */
 		__builtin_memset(xsave_buf + 512, 0, 64); 	/* zero xsave header */
-		active_xstates = __builtin_ia32_xgetbv(1); 	/* get active xstates */
+		active_xstates = __builtin_ia32_xgetbv(0); 	/* get active xstates */
 		__builtin_ia32_xsavec64(xsave_buf, active_xstates); 	/* save state */
 
 		/* increment total xsave LAMEs counter */
