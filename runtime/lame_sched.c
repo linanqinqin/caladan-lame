@@ -533,7 +533,7 @@ static __always_inline __nofp bool needs_xsave(uint64_t rip)
 	uint64_t page_idx = (rip - avx_bitmap_start) / cfg_lame_avx_page_size;
 	if (page_idx >= avx_bitmap_size) {
 		/* rip is not in the bitmap range; xsave by default */
-		return false;
+		return true;
 	}
 	return avx_bitmap[page_idx];
 }
