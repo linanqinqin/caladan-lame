@@ -583,6 +583,9 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 		active_xstates = __builtin_ia32_xgetbv(1); 	/* get active xstates */
 		__builtin_ia32_xsavec64(xsave_buf, active_xstates); 	/* save state */
 
+		/* increment total xsave LAMEs counter */
+		k->lame_bundle.total_xsave_lames++; 
+
 		/* Call __lame_jmp_thread_direct to perform context switch */
 		__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
 
@@ -658,9 +661,10 @@ void lame_print_tsc_counters(void)
 		struct kthread *k = ks[i];
 		if (!k)
 			continue;
-		log_warn("[LAME][TSC][kthread:%u] avg_cycles=%lu; total_cycles=%lu; total_lames=%lu; skip=%lu; stall=%lu; in_lame=%u", i,
+		log_warn("[LAME][TSC][kthread:%u] avg_cycles=%lu; total_cycles=%lu; total_lames=%lu; total_xsave_lames=%lu; skip=%lu; stall=%lu; in_lame=%u", i,
 				 k->lame_bundle.total_lames? k->lame_bundle.total_cycles / k->lame_bundle.total_lames : 0, 
 				 k->lame_bundle.total_cycles, k->lame_bundle.total_lames,
+				 k->lame_bundle.total_xsave_lames,
 				 perthread_read(lame_counter_in_lame), perthread_read(lame_counter_in_preempt),
 				 (uint8_t)perthread_read(in_lame));
 	}

@@ -135,6 +135,7 @@ struct lame_bundle {
 	unsigned int			active;		/* current running uthread index */
 	uint64_t			total_cycles;	/* total cycles across all uthreads */
 	uint64_t			total_lames;	/* total LAMEs handled */
+	uint64_t			total_xsave_lames;	/* total LAMEs handled with xsave */
 	bool				enabled;	/* dynamic runtime enable/disable flag */
 	bool				pad[7];		/* padding to align to 8-byte boundary */
 };
