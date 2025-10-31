@@ -22,6 +22,7 @@
  *     unsigned int active;                       // 4 bytes
  *     uint64_t total_cycles;                     // 8 bytes
  *     uint64_t total_lames;                      // 8 bytes
+ *     uint64_t total_xsave_lames;                // 8 bytes
  *     bool enabled;                              // 1 byte + 7 padding
  * };
  */
@@ -33,7 +34,7 @@
 #define LAME_BUNDLE_ACTIVE          (264)   /* current running uthread index */
 #define LAME_BUNDLE_TOTAL_CYCLES    (272)   /* total cycles across all uthreads */
 #define LAME_BUNDLE_TOTAL_LAMES     (280)   /* total LAMEs handled */
-#define LAME_BUNDLE_ENABLED         (288)   /* dynamic runtime enable/disable flag */
+#define LAME_BUNDLE_ENABLED         (296)   /* dynamic runtime enable/disable flag */
 
 /*
  * LAME Uthread Wrapper Structure Offsets
