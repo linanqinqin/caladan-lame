@@ -9,11 +9,18 @@
 #include <base/log.h>
 #include <base/limits.h>
 #include <runtime/thread.h>
+#include <runtime/smalloc.h>
 
 /* linanqinqin */
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/lame.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <unistd.h>
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
 extern unsigned int cfg_lame_tsc;
@@ -150,6 +157,138 @@ static void *pthread_entry(void *data)
 }
 
 /* linanqinqin */
+unsigned char *avx_bitmap = NULL;
+uint64_t avx_bitmap_start = 0;
+uint64_t avx_bitmap_end = 0;
+extern uint64_t cfg_lame_avx_page_size; 
+
+// Return text mapping [start,end) of the main executable from /proc/self/maps
+static int get_main_exec_text_range(uint64_t *start_out, uint64_t *end_out) {
+    char exe_path[PATH_MAX];
+    if (readlink_exe(exe_path, sizeof(exe_path)) != 0) return -1;
+    FILE *maps = fopen("/proc/self/maps", "r");
+    if (!maps) return -1;
+    char line[4096];
+    while (fgets(line, sizeof(line), maps)) {
+        uint64_t start = 0, end = 0;
+        char perms[8] = {0};
+        unsigned long offset = 0;
+        if (sscanf(line, "%" SCNx64 "-%" SCNx64 " %7s %lx", &start, &end, perms, &offset) != 4) continue;
+        if (perms[0] != 'r' || perms[2] != 'x') continue;
+        char *path = strchr(line, '/');
+        if (!path) continue;
+        size_t l = strlen(path);
+        if (l && path[l - 1] == '\n') path[l - 1] = '\0';
+        char exe_buf[PATH_MAX];
+        if (readlink_exe(exe_buf, sizeof(exe_buf)) != 0) continue;
+        if (strcmp(path, exe_buf) != 0) continue;
+        fclose(maps);
+        *start_out = start;
+        *end_out = end; // end is exclusive as per /proc/self/maps
+        return 0;
+    }
+    fclose(maps);
+    return -1;
+}
+
+static int load_avxdump_sessions(const char *file, uint64_t **starts, uint64_t **ends, size_t *count) {
+	FILE *f = fopen(file, "rb");
+	if (!f) return -1;
+	if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
+	long sz = ftell(f);
+	if (sz < 0) { fclose(f); return -1; }
+	rewind(f);
+	if (sz % 16 != 0) { fclose(f); return -1; }
+	size_t cnt = (size_t)(sz / 16);
+	uint64_t *s = (uint64_t*)szalloc(cnt * sizeof(uint64_t));
+	uint64_t *e = (uint64_t*)szalloc(cnt * sizeof(uint64_t));
+	if (!s || !e) { fclose(f); sfree(s); sfree(e); return -1; }
+	for (size_t i = 0; i < cnt; i++) {
+		uint64_t rs = 0, re = 0;
+		if (fread(&rs, sizeof(uint64_t), 1, f) != 1 || fread(&re, sizeof(uint64_t), 1, f) != 1) {
+			fclose(f); sfree(s); sfree(e); return -1;
+		}
+		s[i] = rs;
+		e[i] = re;
+	}
+	fclose(f);
+	*starts = s; *ends = e; *count = cnt;
+	return 0;
+}
+
+static int avx_bitmap_init()
+{
+	// 1) Determine full path to executable
+    char exe_path[PATH_MAX];
+    if (readlink_exe(exe_path, sizeof(exe_path)) != 0) {
+		log_err("[LAME][avx_bitmap_init] readlink_exe failed: %d", errno);
+        return -errno;
+    }
+
+    // 2) Build avxdump path: <exe_path>.avxdump
+    char avx_path[PATH_MAX];
+    size_t elen = strlen(exe_path);
+    if (elen + strlen(".avxdump") + 1 >= sizeof(avx_path)) {
+        log_err("[LAME][avx_bitmap_init] avxdump path too long");
+        return -ENAMETOOLONG;
+    }
+    snprintf(avx_path, sizeof(avx_path), "%s.avxdump", exe_path);
+
+    // 3) Read sessions (RVAs) from avxdump file (headerless pairs of uint64)
+    uint64_t *rel_starts = NULL, *rel_ends = NULL; 
+	size_t count = 0;
+    if (load_avxdump_sessions(avx_path, &rel_starts, &rel_ends, &count) != 0) {
+        log_err("[LAME][avx_bitmap_init] failed to read avx sessions from %s", avx_path);
+        return -errno;
+    }
+
+    // 4) Get runtime text mapping range for the main executable from /proc/self/maps
+    uint64_t text_start = 0, text_end = 0;
+    if (get_main_exec_text_range(&text_start, &text_end) != 0) {
+        log_err("[LAME][avx_bitmap_init] failed to get runtime text range: %d", errno);
+        sfree(rel_starts); 
+		sfree(rel_ends);
+        return -errno;
+    }
+    uint64_t base = text_start;
+
+    // 6) Build page bitmap (1 byte per page, default page_size=64 configurable via AVX_PAGE_SIZE)
+    uint64_t page_size = cfg_lame_avx_page_size;
+    uint64_t text_len = (text_end > text_start) ? (text_end - text_start) : 0;
+    uint64_t num_pages = (text_len + page_size - 1) / page_size;
+    unsigned char *bitmap = NULL;
+    if (num_pages > 0) bitmap = (unsigned char*)szalloc(num_pages);
+    if (bitmap) {
+        // mark pages: sessions are inclusive on both ends
+        for (size_t i = 0; i < count; i++) {
+            uint64_t abs_s = base + rel_starts[i];
+            uint64_t abs_e = base + rel_ends[i];
+            if (abs_e < abs_s) continue;
+            if (abs_e < text_start || abs_s >= text_end) continue; // no overlap
+            uint64_t clamped_s = (abs_s < text_start) ? text_start : abs_s;
+            uint64_t clamped_e = (abs_e >= text_end) ? (text_end - 1) : abs_e; // inclusive end
+            uint64_t start_idx = (clamped_s - text_start) / page_size;
+            uint64_t end_idx = (clamped_e - text_start) / page_size;
+            if (end_idx >= num_pages) end_idx = num_pages - 1;
+            for (uint64_t p = start_idx; p <= end_idx; p++) bitmap[p] = 1;
+        }
+		
+        log_info("[LAME] avx bitmap has %lu pages, page size = %lu", num_pages, page_size);
+		avx_bitmap = bitmap;
+		avx_bitmap_start = text_start;
+		avx_bitmap_end = text_end;
+		sfree(rel_starts); 
+		sfree(rel_ends);
+		return 0;
+    } else {
+        log_err("[LAME] avx bitmap not allocated (num_pages=%lu)", num_pages);
+        sfree(bitmap); 
+		sfree(rel_starts); 
+		sfree(rel_ends);
+        return -EINVAL;
+    }
+}
+
 /* register lame handler via ioctl */
 static int lame_init(void)
 {
@@ -206,12 +345,7 @@ static int lame_init(void)
 		/* via PMU, with LAME switching */
 		} else if (cfg_lame_register == RT_LAME_REGISTER_PMU) {
 			register_mode = LAME_REGISTER_PMU;
-			arg.handler_addr = (__u64)__lame_entry_bret_slowpath;
-			// if (cfg_lame_bundle_size == 2) {
-			// 	arg.handler_addr = (__u64)__lame_entry2_bret;
-			// } else {
-			// 	arg.handler_addr = (__u64)__lame_entry_bret;
-			// }
+			arg.handler_addr = (__u64)__lame_entry_bret;
 		/* via PMU, with stall emulation */
 		} else if (cfg_lame_register == RT_LAME_REGISTER_STALL) {
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
@@ -283,6 +417,19 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 		return ret;
 
 	/* linanqinqin */
+
+	/* construct the bitmap for avx sessions */
+	if (cfg_lame_avx_page_size > 0) {
+		ret = avx_bitmap_init();
+		if (ret) {
+			log_err("avx bitmap init failed, ret = %d", ret);
+			return ret;
+		}
+	}
+	else {
+		log_warn("WARNING: AVX bitmap not enabled");
+	}
+
 	/* Print the address of __lame_entry handler */
 	log_info("LAME handler stub address: %p(size=2); %p(general)", (void *)__lame_entry2, (void *)__lame_entry);
 
