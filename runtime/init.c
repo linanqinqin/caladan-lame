@@ -162,6 +162,13 @@ uint64_t avx_bitmap_start = 0;
 uint64_t avx_bitmap_end = 0;
 extern uint64_t cfg_lame_avx_page_size; 
 
+static int readlink_exe(char *buf, size_t sz) {
+	ssize_t n = readlink("/proc/self/exe", buf, sz - 1);
+	if (n < 0) return -1;
+	buf[n] = '\0';
+	return 0;
+}
+
 // Return text mapping [start,end) of the main executable from /proc/self/maps
 static int get_main_exec_text_range(uint64_t *start_out, uint64_t *end_out) {
     char exe_path[PATH_MAX];
