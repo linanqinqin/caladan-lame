@@ -508,15 +508,26 @@ extern uint64_t avx_bitmap_start;
 extern uint64_t avx_bitmap_end;
 extern uint64_t avx_bitmap_size;
 extern unsigned char *avx_bitmap;
+/* tmp debug */
+DEFINE_PERTHREAD(uint64_t, rips[10]);
+/* -1=not in bitmap, 0=no xsave, 1=needs xsave*/
+DEFINE_PERTHREAD(int, decisions[10]);
+DEFINE_PERTHREAD(int, rip_idx) = 0;
 static __always_inline __nofp bool needs_xsave(uint64_t rip) 
 {
-	// if (rip < avx_bitmap_start || rip >= avx_bitmap_end) {
-	// 	/* rip is not in the bitmap range; xsave by default */
-	// 	return true;
-	// }
-	// uint64_t page_idx = (rip - avx_bitmap_start) >> 6; /* 64 bytes per page */
-	// return avx_bitmap[page_idx];
-	return true;
+	int idx = perthread_read(rip_idx);
+	if (idx < 9) {
+		perthread_store(rip_idx, idx + 1);
+	}
+	perthread_store(rips[idx], rip);
+	if (rip < avx_bitmap_start || rip >= avx_bitmap_end) {
+		/* rip is not in the bitmap range; xsave by default */
+		perthread_store(decisions[idx], -1);
+		return true;
+	}
+	uint64_t page_idx = (rip - avx_bitmap_start) >> 6; /* 64 bytes per page */
+	perthread_store(decisions[idx], avx_bitmap[page_idx]);
+	return avx_bitmap[page_idx];
 }
 
 /**
@@ -652,6 +663,10 @@ void lame_print_tsc_counters(void)
 				 k->lame_bundle.total_xsave_lames,
 				 perthread_read(lame_counter_in_lame), perthread_read(lame_counter_in_preempt),
 				 (uint8_t)perthread_read(in_lame));
+		for (int j = 0; j < 10; j++) {
+			log_warn("[LAME][kthread:%u] rip=%lx; decision=%d", i, 
+				perthread_read(rips[j]), perthread_read(decisions[j]));
+		}
 	}
 }
 /* end */
