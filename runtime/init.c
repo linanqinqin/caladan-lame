@@ -159,6 +159,7 @@ static void *pthread_entry(void *data)
 unsigned char *avx_bitmap = NULL;
 uint64_t avx_bitmap_start = 0;
 uint64_t avx_bitmap_end = 0;
+uint64_t avx_bitmap_size = 0;
 extern uint64_t cfg_lame_avx_page_size; 
 
 static int readlink_exe(char *buf, size_t sz) {
@@ -283,6 +284,7 @@ static int avx_bitmap_init()
 		avx_bitmap = bitmap;
 		avx_bitmap_start = text_start;
 		avx_bitmap_end = text_end;
+		avx_bitmap_size = num_pages;
 		free(rel_starts); 
 		free(rel_ends);
 		return 0;

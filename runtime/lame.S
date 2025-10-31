@@ -539,6 +539,7 @@ __lame_entry_bret:
 	preempt_off /* disable preemption to protect LAME context switch atomicity */
 	
 	pushcallerregs /* save volatile registers to stack */
+	movq 	10*8(%rsp), %rdi /* get rip from the LAME frame and pass it as the first argument; there are 2 qwords of the fame and 9 pushqs */
 	call	lame_handle
 
 	/* this point is reached when this uthread is switched out and then back in by LAME */
@@ -552,7 +553,7 @@ __lame_entry_bret:
 	incq	%gs:__perthread_lame_counter_in_lame(%rip)
 	bretq
 
-2:  /* preemption is already disabled */
+2:  /* preemption is already disabled; must run as a stall */
 	pushcallerregs
 	incq	%gs:__perthread_lame_counter_in_preempt(%rip)
 	call	lame_stall

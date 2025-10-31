@@ -523,6 +523,21 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
 	k->lame_bundle.active = 0;
 }
 
+extern uint64_t cfg_lame_avx_page_size;
+extern uint64_t avx_bitmap_start;
+extern uint64_t avx_bitmap_end;
+extern uint64_t avx_bitmap_size;
+extern unsigned char *avx_bitmap;
+static __always_inline __nofp bool needs_xsave(uint64_t rip) 
+{
+	uint64_t page_idx = (rip - avx_bitmap_start) / cfg_lame_avx_page_size;
+	if (page_idx >= avx_bitmap_size) {
+		/* rip is not in the bitmap range; xsave by default */
+		return false;
+	}
+	return avx_bitmap[page_idx];
+}
+
 /**
  * lame_handle - handles LAME exception and performs context switch
  * 
@@ -535,7 +550,7 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
  * 5. Call __jmp_thread_direct to perform context switch
  */
 __attribute__((optimize("O3")))
-__always_inline __nofp void lame_handle(void)
+__always_inline __nofp void lame_handle(uint64_t rip)
 {
 	struct kthread *k = myk();
 	thread_t *cur_th, *next_th;
@@ -557,22 +572,28 @@ __always_inline __nofp void lame_handle(void)
 	/* Update __self to point to the new uthread */
 	perthread_store(__self, next_th);
 
-	/* xsave */
-	xsave_buf = alloca(xsave_max_size + 64); 	/* allocate buffer for xsave area on stack */
-	xsave_buf = (unsigned char *)align_up((uintptr_t)xsave_buf, 64); 	/* align to 64 bytes */
-	__builtin_memset(xsave_buf + 512, 0, 64); 	/* zero xsave header */
-	active_xstates = __builtin_ia32_xgetbv(1); 	/* get active xstates */
-	__builtin_ia32_xsavec64(xsave_buf, active_xstates); 	/* save state */
-
 	/* increment total LAMEs counter */
 	k->lame_bundle.total_lames++; 
 
-	/* Call __lame_jmp_thread_direct to perform context switch */
-	__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
+	if (needs_xsave(rip)) {
+		/* xsave */
+		xsave_buf = alloca(xsave_max_size + 64); 	/* allocate buffer for xsave area on stack */
+		xsave_buf = (unsigned char *)align_up((uintptr_t)xsave_buf, 64); 	/* align to 64 bytes */
+		__builtin_memset(xsave_buf + 512, 0, 64); 	/* zero xsave header */
+		active_xstates = __builtin_ia32_xgetbv(1); 	/* get active xstates */
+		__builtin_ia32_xsavec64(xsave_buf, active_xstates); 	/* save state */
 
-	/* This point is reached when switching back to this thread */
-	/* restore xsave state */
-	__builtin_ia32_xrstor64(xsave_buf, active_xstates); 	
+		/* Call __lame_jmp_thread_direct to perform context switch */
+		__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
+
+		/* This point is reached when switching back to this thread */
+		/* restore xsave state */
+		__builtin_ia32_xrstor64(xsave_buf, active_xstates); 	
+	}	
+	else {
+		/* Call __lame_jmp_thread_direct to perform context switch */
+		__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
+	}
 }
 
 __always_inline __nofp void lame_handle_bret(uint64_t *ret) {
