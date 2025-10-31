@@ -9,7 +9,6 @@
 #include <base/log.h>
 #include <base/limits.h>
 #include <runtime/thread.h>
-#include <runtime/smalloc.h>
 
 /* linanqinqin */
 #include <fcntl.h>
@@ -207,13 +206,13 @@ static int load_avxdump_sessions(const char *file, uint64_t **starts, uint64_t *
 	rewind(f);
 	if (sz % 16 != 0) { fclose(f); return -1; }
 	size_t cnt = (size_t)(sz / 16);
-	uint64_t *s = (uint64_t*)szalloc(cnt * sizeof(uint64_t));
-	uint64_t *e = (uint64_t*)szalloc(cnt * sizeof(uint64_t));
-	if (!s || !e) { fclose(f); sfree(s); sfree(e); return -1; }
+	uint64_t *s = (uint64_t*)calloc(cnt, sizeof(uint64_t));
+	uint64_t *e = (uint64_t*)calloc(cnt, sizeof(uint64_t));
+	if (!s || !e) { fclose(f); free(s); free(e); return -1; }
 	for (size_t i = 0; i < cnt; i++) {
 		uint64_t rs = 0, re = 0;
 		if (fread(&rs, sizeof(uint64_t), 1, f) != 1 || fread(&re, sizeof(uint64_t), 1, f) != 1) {
-			fclose(f); sfree(s); sfree(e); return -1;
+			fclose(f); free(s); free(e); return -1;
 		}
 		s[i] = rs;
 		e[i] = re;
@@ -253,8 +252,8 @@ static int avx_bitmap_init()
     uint64_t text_start = 0, text_end = 0;
     if (get_main_exec_text_range(&text_start, &text_end) != 0) {
         log_err("[LAME][avx_bitmap_init] failed to get runtime text range: %d", errno);
-        sfree(rel_starts); 
-		sfree(rel_ends);
+        free(rel_starts);
+        free(rel_ends);
         return -errno;
     }
     uint64_t base = text_start;
@@ -264,7 +263,7 @@ static int avx_bitmap_init()
     uint64_t text_len = (text_end > text_start) ? (text_end - text_start) : 0;
     uint64_t num_pages = (text_len + page_size - 1) / page_size;
     unsigned char *bitmap = NULL;
-    if (num_pages > 0) bitmap = (unsigned char*)szalloc(num_pages);
+    if (num_pages > 0) bitmap = (unsigned char*)calloc(num_pages, 1);
     if (bitmap) {
         // mark pages: sessions are inclusive on both ends
         for (size_t i = 0; i < count; i++) {
@@ -284,14 +283,14 @@ static int avx_bitmap_init()
 		avx_bitmap = bitmap;
 		avx_bitmap_start = text_start;
 		avx_bitmap_end = text_end;
-		sfree(rel_starts); 
-		sfree(rel_ends);
+		free(rel_starts); 
+		free(rel_ends);
 		return 0;
     } else {
         log_err("[LAME] avx bitmap not allocated (num_pages=%lu)", num_pages);
-        sfree(bitmap); 
-		sfree(rel_starts); 
-		sfree(rel_ends);
+        free(bitmap); 
+		free(rel_starts); 
+		free(rel_ends);
         return -EINVAL;
     }
 }
