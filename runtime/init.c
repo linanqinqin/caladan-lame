@@ -358,7 +358,7 @@ static int gpr_bitmap_init()
 			if (e <= s) continue;
 			e = (e+text_start >= text_end) ? text_end : e;
 			uint64_t start_idx = (s & ((1UL<<pgsz_factor)-1)) ? (s>>pgsz_factor)+1 : s>>pgsz_factor;
-			uint64_t end_idx = (e & ((1UL<<pgsz_factor)-1)) ? e>>pgsz_factor : (e>>pgsz_factor)-1; /* since e is exclusive, we need to subtract 1 if e is at a page boundary */
+			uint64_t end_idx = (e>>pgsz_factor)-1; 
 			if (end_idx >= num_pages) end_idx = num_pages - 1;
 			for (uint64_t p = start_idx; p <= end_idx; p++) bitmap[p] = 1;
 			/* tmp debug */
