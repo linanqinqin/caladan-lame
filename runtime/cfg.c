@@ -297,7 +297,7 @@ static int parse_runtime_lame_bitmap_pgsz_factor(const char *name, const char *v
 {
 	cfg_lame_bitmap_pgsz_factor = atoi(val);
 	if (cfg_lame_bitmap_pgsz_factor < 0 || cfg_lame_bitmap_pgsz_factor > 12) {
-		log_err("runtime_lame_bitmap_pgsz_factor must be between 0 and 12, got %d", cfg_lame_bitmap_pgsz_factor);
+		log_err("runtime_lame_bitmap_pgsz_factor must be between 0 and 12, got %lu", cfg_lame_bitmap_pgsz_factor);
 		return -EINVAL;
 	}
 	return 0;

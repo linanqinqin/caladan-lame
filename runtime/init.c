@@ -357,8 +357,8 @@ static int gpr_bitmap_init()
 			uint64_t e = rel_ends[i];
 			if (e <= s) continue;
 			e = (e+text_start >= text_end) ? text_end : e;
-			uint64_t start_idx = (s & ((1ULL<<pgsz_factor)-1)) ? (s>>pgsz_factor)+1 : s>>pgsz_factor;
-			uint64_t end_idx = (e & ((1ULL<<pgsz_factor)-1)) ? (e>>pgsz_factor)-1 : e>>pgsz_factor;
+			uint64_t start_idx = (s & ((1UL<<pgsz_factor)-1)) ? (s>>pgsz_factor)+1 : s>>pgsz_factor;
+			uint64_t end_idx = (e & ((1UL<<pgsz_factor)-1)) ? (e>>pgsz_factor)-1 : e>>pgsz_factor;
 			if (end_idx >= num_pages) end_idx = num_pages - 1;
 			for (uint64_t p = start_idx; p <= end_idx; p++) bitmap[p] = 1;
 			/* tmp debug */
@@ -369,7 +369,7 @@ static int gpr_bitmap_init()
         }
 		
         log_info("[LAME] gpr bitmap has %lu pages, page size = %lu bytes, start = 0x%lx, end = 0x%lx", 
-				num_pages, 1ULL << pgsz_factor, text_start, text_end);
+				num_pages, 1UL << pgsz_factor, text_start, text_end);
 		gpr_bitmap = bitmap;
 		gpr_bitmap_start = text_start;
 		gpr_bitmap_end = text_end;
