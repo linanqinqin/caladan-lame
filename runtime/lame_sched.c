@@ -513,7 +513,7 @@ DEFINE_PERTHREAD(uint64_t, rips[10]);
 /* -1=not in bitmap, 0=no xsave, 1=needs xsave*/
 DEFINE_PERTHREAD(int, decisions[10]);
 DEFINE_PERTHREAD(int, rip_idx) = 0;
-static __always_inline __nofp bool needs_xsave(uint64_t rip) 
+static __always_inline __nofp bool needs_xsave_debug(uint64_t rip) 
 {
 	int idx = perthread_read(rip_idx);
 	if (idx < 9) {
@@ -527,6 +527,16 @@ static __always_inline __nofp bool needs_xsave(uint64_t rip)
 	}
 	uint64_t page_idx = (rip - avx_bitmap_start) >> 6; /* 64 bytes per page */
 	perthread_store(decisions[idx], avx_bitmap[page_idx]);
+	return avx_bitmap[page_idx];
+}
+
+static __always_inline __nofp bool needs_xsave(uint64_t rip) 
+{
+	if (rip < avx_bitmap_start || rip >= avx_bitmap_end) {
+		/* rip is not in the bitmap range; xsave by default */
+		return true;
+	}
+	uint64_t page_idx = (rip - avx_bitmap_start) >> 6; /* 64 bytes per page */
 	return avx_bitmap[page_idx];
 }
 
@@ -567,7 +577,7 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 	/* increment total LAMEs counter */
 	k->lame_bundle.total_lames++; 
 
-	if (needs_xsave(rip)) {
+	if (unlikely(needs_xsave(rip))) {
 		uint64_t tsc_start = __rdtsc();
 		/* xsave */
 		xsave_buf = alloca(xsave_max_size + 64); 	/* allocate buffer for xsave area on stack */
