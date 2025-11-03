@@ -503,11 +503,11 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
 	k->lame_bundle.active = 0;
 }
 
-extern uint64_t cfg_lame_avx_page_size;
-extern uint64_t avx_bitmap_start;
-extern uint64_t avx_bitmap_end;
-extern uint64_t avx_bitmap_size;
-extern unsigned char *avx_bitmap;
+extern uint64_t cfg_lame_bitmap_pgsz_factor;
+extern uint64_t text_section_start;
+extern uint64_t text_section_end;
+extern uint64_t gpr_bitmap_size;
+extern unsigned char *gpr_bitmap;
 /* tmp debug */
 DEFINE_PERTHREAD(uint64_t, rips[10]);
 /* -1=not in bitmap, 0=no xsave, 1=needs xsave*/
@@ -520,24 +520,24 @@ static __always_inline __nofp bool needs_xsave_debug(uint64_t rip)
 		perthread_store(rip_idx, idx + 1);
 	}
 	perthread_store(rips[idx], rip);
-	if (rip < avx_bitmap_start || rip >= avx_bitmap_end) {
+	if (rip < text_section_start || rip >= text_section_end) {
 		/* rip is not in the bitmap range; xsave by default */
 		perthread_store(decisions[idx], -1);
 		return true;
 	}
-	uint64_t page_idx = (rip - avx_bitmap_start) >> 6; /* 64 bytes per page */
-	perthread_store(decisions[idx], avx_bitmap[page_idx]);
-	return avx_bitmap[page_idx];
+	uint64_t page_idx = (rip - text_section_start) >> cfg_lame_bitmap_pgsz_factor;
+	perthread_store(decisions[idx], gpr_bitmap[page_idx]);
+	return gpr_bitmap[page_idx]==0;
 }
 
 static __always_inline __nofp bool needs_xsave(uint64_t rip) 
 {
-	if (rip < avx_bitmap_start || rip >= avx_bitmap_end) {
+	if (rip < text_section_start || rip >= text_section_end) {
 		/* rip is not in the bitmap range; xsave by default */
 		return true;
 	}
-	uint64_t page_idx = (rip - avx_bitmap_start) >> 6; /* 64 bytes per page */
-	return avx_bitmap[page_idx];
+	uint64_t page_idx = (rip - text_section_start) >> cfg_lame_bitmap_pgsz_factor;
+	return gpr_bitmap[page_idx]==0;
 }
 
 /**

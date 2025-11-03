@@ -156,14 +156,13 @@ static void *pthread_entry(void *data)
 }
 
 /* linanqinqin */
+uint64_t text_section_start = 0;
+uint64_t text_section_end = 0;
+
 unsigned char *avx_bitmap = NULL;
-uint64_t avx_bitmap_start = 0;
-uint64_t avx_bitmap_end = 0;
 uint64_t avx_bitmap_size = 0;
 
 unsigned char *gpr_bitmap = NULL;
-uint64_t gpr_bitmap_start = 0;
-uint64_t gpr_bitmap_end = 0;
 uint64_t gpr_bitmap_size = 0;
 
 extern uint64_t cfg_lame_bitmap_pgsz_factor; 
@@ -371,8 +370,8 @@ static int gpr_bitmap_init()
         log_info("[LAME] gpr bitmap has %lu pages, page size = %lu bytes, start = 0x%lx, end = 0x%lx", 
 				num_pages, 1UL << pgsz_factor, text_start, text_end);
 		gpr_bitmap = bitmap;
-		gpr_bitmap_start = text_start;
-		gpr_bitmap_end = text_end;
+		text_section_start = text_start;
+		text_section_end = text_end;
 		gpr_bitmap_size = num_pages;
 		free(rel_starts); 
 		free(rel_ends);
