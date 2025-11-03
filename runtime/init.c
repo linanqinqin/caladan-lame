@@ -233,80 +233,80 @@ static int load_sessions(const char *file, uint64_t **starts, uint64_t **ends, s
 	return 0;
 }
 
-static int avx_bitmap_init()
-{
-	// 1) Determine full path to executable
-    char exe_path[PATH_MAX];
-    if (readlink_exe(exe_path, sizeof(exe_path)) != 0) {
-		log_err("[LAME][avx_bitmap_init] readlink_exe failed: %d", errno);
-        return -errno;
-    }
+// static int avx_bitmap_init()
+// {
+// 	// 1) Determine full path to executable
+//     char exe_path[PATH_MAX];
+//     if (readlink_exe(exe_path, sizeof(exe_path)) != 0) {
+// 		log_err("[LAME][avx_bitmap_init] readlink_exe failed: %d", errno);
+//         return -errno;
+//     }
 
-    // 2) Build avxdump path: <exe_path>.avxdump
-    char avx_path[PATH_MAX];
-    size_t elen = strlen(exe_path);
-    if (elen + strlen(".avxdump") + 1 >= sizeof(avx_path)) {
-        log_err("[LAME][avx_bitmap_init] avxdump path too long");
-        return -ENAMETOOLONG;
-    }
-    snprintf(avx_path, sizeof(avx_path), "%s.avxdump", exe_path);
+//     // 2) Build avxdump path: <exe_path>.avxdump
+//     char avx_path[PATH_MAX];
+//     size_t elen = strlen(exe_path);
+//     if (elen + strlen(".avxdump") + 1 >= sizeof(avx_path)) {
+//         log_err("[LAME][avx_bitmap_init] avxdump path too long");
+//         return -ENAMETOOLONG;
+//     }
+//     snprintf(avx_path, sizeof(avx_path), "%s.avxdump", exe_path);
 
-    // 3) Read sessions (RVAs) from avxdump file (headerless pairs of uint64)
-    uint64_t *rel_starts = NULL, *rel_ends = NULL; 
-	size_t count = 0;
-    if (load_sessions(avx_path, &rel_starts, &rel_ends, &count) != 0) {
-        log_err("[LAME][avx_bitmap_init] failed to read avx sessions from %s", avx_path);
-        return -errno;
-    }
+//     // 3) Read sessions (RVAs) from avxdump file (headerless pairs of uint64)
+//     uint64_t *rel_starts = NULL, *rel_ends = NULL; 
+// 	size_t count = 0;
+//     if (load_sessions(avx_path, &rel_starts, &rel_ends, &count) != 0) {
+//         log_err("[LAME][avx_bitmap_init] failed to read avx sessions from %s", avx_path);
+//         return -errno;
+//     }
 
-    // 4) Get runtime text mapping range for the main executable from /proc/self/maps
-    uint64_t text_start = 0, text_end = 0;
-    if (get_main_exec_text_range(&text_start, &text_end) != 0) {
-        log_err("[LAME][avx_bitmap_init] failed to get runtime text range: %d", errno);
-        free(rel_starts);
-        free(rel_ends);
-        return -errno;
-    }
-    uint64_t base = text_start;
+//     // 4) Get runtime text mapping range for the main executable from /proc/self/maps
+//     uint64_t text_start = 0, text_end = 0;
+//     if (get_main_exec_text_range(&text_start, &text_end) != 0) {
+//         log_err("[LAME][avx_bitmap_init] failed to get runtime text range: %d", errno);
+//         free(rel_starts);
+//         free(rel_ends);
+//         return -errno;
+//     }
+//     uint64_t base = text_start;
 
-    // 6) Build page bitmap (1 byte per page, default page_size=64 configurable via AVX_PAGE_SIZE)
-    uint64_t page_size = cfg_lame_bitmap_page_size;
-    uint64_t text_len = (text_end > text_start) ? (text_end - text_start) : 0;
-    uint64_t num_pages = (text_len + page_size - 1) / page_size;
-    unsigned char *bitmap = NULL;
-    if (num_pages > 0) bitmap = (unsigned char*)calloc(num_pages, 1);
-    if (bitmap) {
-        // mark pages: sessions are inclusive on both ends
-        for (size_t i = 0; i < count; i++) {
-            uint64_t abs_s = base + rel_starts[i];
-            uint64_t abs_e = base + rel_ends[i];
-            if (abs_e < abs_s) continue;
-            if (abs_e < text_start || abs_s >= text_end) continue; // no overlap
-            uint64_t clamped_s = (abs_s < text_start) ? text_start : abs_s;
-            uint64_t clamped_e = (abs_e >= text_end) ? (text_end - 1) : abs_e; // inclusive end
-            uint64_t start_idx = (clamped_s - text_start) / page_size;
-            uint64_t end_idx = (clamped_e - text_start) / page_size;
-            if (end_idx >= num_pages) end_idx = num_pages - 1;
-            for (uint64_t p = start_idx; p <= end_idx; p++) bitmap[p] = 1;
-        }
+//     // 6) Build page bitmap (1 byte per page, default page_size=64 configurable via AVX_PAGE_SIZE)
+//     uint64_t page_size = cfg_lame_bitmap_page_size;
+//     uint64_t text_len = (text_end > text_start) ? (text_end - text_start) : 0;
+//     uint64_t num_pages = (text_len + page_size - 1) / page_size;
+//     unsigned char *bitmap = NULL;
+//     if (num_pages > 0) bitmap = (unsigned char*)calloc(num_pages, 1);
+//     if (bitmap) {
+//         // mark pages: sessions are inclusive on both ends
+//         for (size_t i = 0; i < count; i++) {
+//             uint64_t abs_s = base + rel_starts[i];
+//             uint64_t abs_e = base + rel_ends[i];
+//             if (abs_e < abs_s) continue;
+//             if (abs_e < text_start || abs_s >= text_end) continue; // no overlap
+//             uint64_t clamped_s = (abs_s < text_start) ? text_start : abs_s;
+//             uint64_t clamped_e = (abs_e >= text_end) ? (text_end - 1) : abs_e; // inclusive end
+//             uint64_t start_idx = (clamped_s - text_start) / page_size;
+//             uint64_t end_idx = (clamped_e - text_start) / page_size;
+//             if (end_idx >= num_pages) end_idx = num_pages - 1;
+//             for (uint64_t p = start_idx; p <= end_idx; p++) bitmap[p] = 1;
+//         }
 		
-        log_info("[LAME] avx bitmap has %lu pages, page size = %lu, start = 0x%lx, end = 0x%lx", 
-				num_pages, page_size, text_start, text_end);
-		avx_bitmap = bitmap;
-		avx_bitmap_start = text_start;
-		avx_bitmap_end = text_end;
-		avx_bitmap_size = num_pages;
-		free(rel_starts); 
-		free(rel_ends);
-		return 0;
-    } else {
-        log_err("[LAME] avx bitmap not allocated (num_pages=%lu)", num_pages);
-        free(bitmap); 
-		free(rel_starts); 
-		free(rel_ends);
-        return -EINVAL;
-    }
-}
+//         log_info("[LAME] avx bitmap has %lu pages, page size = %lu, start = 0x%lx, end = 0x%lx", 
+// 				num_pages, page_size, text_start, text_end);
+// 		avx_bitmap = bitmap;
+// 		avx_bitmap_start = text_start;
+// 		avx_bitmap_end = text_end;
+// 		avx_bitmap_size = num_pages;
+// 		free(rel_starts); 
+// 		free(rel_ends);
+// 		return 0;
+//     } else {
+//         log_err("[LAME] avx bitmap not allocated (num_pages=%lu)", num_pages);
+//         free(bitmap); 
+// 		free(rel_starts); 
+// 		free(rel_ends);
+//         return -EINVAL;
+//     }
+// }
 
 static int gpr_bitmap_init()
 {
@@ -515,8 +515,8 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 
 	/* linanqinqin */
 
-	/* construct the bitmap for avx sessions */
-	if (cfg_lame_bitmap_page_size > 0) {
+	/* construct the bitmap for gpr sessions */
+	if (cfg_lame_bitmap_pgsz_factor >= 0) {
 		ret = gpr_bitmap_init();
 		if (ret) {
 			log_err("gpr bitmap init failed, ret = %d", ret);
