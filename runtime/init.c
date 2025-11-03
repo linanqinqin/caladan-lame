@@ -160,7 +160,13 @@ unsigned char *avx_bitmap = NULL;
 uint64_t avx_bitmap_start = 0;
 uint64_t avx_bitmap_end = 0;
 uint64_t avx_bitmap_size = 0;
-extern uint64_t cfg_lame_avx_page_size; 
+
+unsigned char *gpr_bitmap = NULL;
+uint64_t gpr_bitmap_start = 0;
+uint64_t gpr_bitmap_end = 0;
+uint64_t gpr_bitmap_size = 0;
+
+extern uint64_t cfg_lame_bitmap_page_size; 
 
 static int readlink_exe(char *buf, size_t sz) {
 	ssize_t n = readlink("/proc/self/exe", buf, sz - 1);
@@ -198,7 +204,7 @@ static int get_main_exec_text_range(uint64_t *start_out, uint64_t *end_out) {
     return -1;
 }
 
-static int load_avxdump_sessions(const char *file, uint64_t **starts, uint64_t **ends, size_t *count) {
+static int load_sessions(const char *file, uint64_t **starts, uint64_t **ends, size_t *count) {
 	FILE *f = fopen(file, "rb");
 	if (!f) return -1;
 	if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
@@ -217,6 +223,10 @@ static int load_avxdump_sessions(const char *file, uint64_t **starts, uint64_t *
 		}
 		s[i] = rs;
 		e[i] = re;
+		/* tmp debug */
+		if (i < 10) {
+			log_info("[LAME][load_sessions] session %lu: start = 0x%lx, end = 0x%lx", i, rs, re);
+		}
 	}
 	fclose(f);
 	*starts = s; *ends = e; *count = cnt;
@@ -244,7 +254,7 @@ static int avx_bitmap_init()
     // 3) Read sessions (RVAs) from avxdump file (headerless pairs of uint64)
     uint64_t *rel_starts = NULL, *rel_ends = NULL; 
 	size_t count = 0;
-    if (load_avxdump_sessions(avx_path, &rel_starts, &rel_ends, &count) != 0) {
+    if (load_sessions(avx_path, &rel_starts, &rel_ends, &count) != 0) {
         log_err("[LAME][avx_bitmap_init] failed to read avx sessions from %s", avx_path);
         return -errno;
     }
@@ -260,7 +270,7 @@ static int avx_bitmap_init()
     uint64_t base = text_start;
 
     // 6) Build page bitmap (1 byte per page, default page_size=64 configurable via AVX_PAGE_SIZE)
-    uint64_t page_size = cfg_lame_avx_page_size;
+    uint64_t page_size = cfg_lame_bitmap_page_size;
     uint64_t text_len = (text_end > text_start) ? (text_end - text_start) : 0;
     uint64_t num_pages = (text_len + page_size - 1) / page_size;
     unsigned char *bitmap = NULL;
@@ -296,6 +306,43 @@ static int avx_bitmap_init()
 		free(rel_ends);
         return -EINVAL;
     }
+}
+
+static int gpr_bitmap_init()
+{
+	// 1) Determine full path to executable
+    char exe_path[PATH_MAX];
+    if (readlink_exe(exe_path, sizeof(exe_path)) != 0) {
+		log_err("[LAME][gpr_bitmap_init] readlink_exe failed: %d", errno);
+        return -errno;
+    }
+
+    // 2) Build avxdump path: <exe_path>.avxdump
+    char gpr_path[PATH_MAX];
+    size_t elen = strlen(exe_path);
+    if (elen + strlen(".gprdump") + 1 >= sizeof(gpr_path)) {
+        log_err("[LAME][gpr_bitmap_init] gprdump path too long");
+        return -ENAMETOOLONG;
+    }
+    snprintf(gpr_path, sizeof(gpr_path), "%s.gprdump", exe_path);
+
+    // 3) Read sessions (RVAs) from avxdump file (headerless pairs of uint64)
+    uint64_t *rel_starts = NULL, *rel_ends = NULL; 
+	size_t count = 0;
+    if (load_sessions(gpr_path, &rel_starts, &rel_ends, &count) != 0) {
+        log_err("[LAME][gpr_bitmap_init] failed to read gpr sessions from %s", gpr_path);
+        return -errno;
+    }
+
+    // 4) Get runtime text mapping range for the main executable from /proc/self/maps
+    uint64_t text_start = 0, text_end = 0;
+    if (get_main_exec_text_range(&text_start, &text_end) != 0) {
+        log_err("[LAME][gpr_bitmap_init] failed to get runtime text range: %d", errno);
+        free(rel_starts);
+        free(rel_ends);
+        return -errno;
+    }
+    uint64_t base = text_start;
 }
 
 /* register lame handler via ioctl */
@@ -428,15 +475,15 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	/* linanqinqin */
 
 	/* construct the bitmap for avx sessions */
-	if (cfg_lame_avx_page_size > 0) {
-		ret = avx_bitmap_init();
+	if (cfg_lame_bitmap_page_size > 0) {
+		ret = gpr_bitmap_init();
 		if (ret) {
-			log_err("avx bitmap init failed, ret = %d", ret);
+			log_err("gpr bitmap init failed, ret = %d", ret);
 			return ret;
 		}
 	}
 	else {
-		log_warn("WARNING: AVX bitmap not enabled");
+		log_warn("WARNING: GPR bitmap not enabled");
 	}
 
 	/* Print the address of __lame_entry handler */
