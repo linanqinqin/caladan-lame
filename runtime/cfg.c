@@ -26,7 +26,7 @@ unsigned int cfg_lame_bundle_size = LAME_BUNDLE_SIZE_DEFAULT;
 unsigned int cfg_lame_tsc = LAME_TSC_OFF;
 unsigned int cfg_lame_register = RT_LAME_REGISTER_NONE;
 unsigned int cfg_lame_stall_cycles = 0;
-uint64_t cfg_lame_bitmap_page_size = 64;
+uint64_t cfg_lame_bitmap_pgsz_factor = 6; /* 1 << 6 = 64 bytes per page by default */
 /* end */
 
 /*
@@ -293,9 +293,13 @@ static int parse_runtime_lame_register(const char *name, const char *val)
 	return 0;
 }
 
-static int parse_runtime_lame_bitmap_page_size(const char *name, const char *val)
+static int parse_runtime_lame_bitmap_pgsz_factor(const char *name, const char *val)
 {
-	cfg_lame_bitmap_page_size = atoi(val);
+	cfg_lame_bitmap_pgsz_factor = atoi(val);
+	if (cfg_lame_bitmap_pgsz_factor < 0 || cfg_lame_bitmap_pgsz_factor > 12) {
+		log_err("runtime_lame_bitmap_pgsz_factor must be between 0 and 12, got %d", cfg_lame_bitmap_pgsz_factor);
+		return -EINVAL;
+	}
 	return 0;
 }
 /* end */
@@ -471,7 +475,7 @@ static const struct cfg_handler cfg_handlers[] = {
 	{ "runtime_lame_bundle_size", parse_runtime_lame_bundle_size, false },
 	{ "runtime_lame_tsc", parse_runtime_lame_tsc, false },
 	{ "runtime_lame_register", parse_runtime_lame_register, false },
-	{ "runtime_lame_bitmap_page_size", parse_runtime_lame_bitmap_page_size, false },
+	{ "runtime_lame_bitmap_pgsz_factor", parse_runtime_lame_bitmap_pgsz_factor, false },
 	/* end */
 	{ "static_arp", parse_static_arp_entry, false },
 	{ "log_level", parse_log_level, false },

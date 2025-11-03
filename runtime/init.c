@@ -166,7 +166,7 @@ uint64_t gpr_bitmap_start = 0;
 uint64_t gpr_bitmap_end = 0;
 uint64_t gpr_bitmap_size = 0;
 
-extern uint64_t cfg_lame_bitmap_page_size; 
+extern uint64_t cfg_lame_bitmap_pgsz_factor; 
 
 static int readlink_exe(char *buf, size_t sz) {
 	ssize_t n = readlink("/proc/self/exe", buf, sz - 1);
@@ -224,9 +224,9 @@ static int load_sessions(const char *file, uint64_t **starts, uint64_t **ends, s
 		s[i] = rs;
 		e[i] = re;
 		/* tmp debug */
-		if (i < 10) {
-			log_info("[LAME][load_sessions] session %lu: start = 0x%lx, end = 0x%lx", i, rs, re);
-		}
+		// if (i < 10) {
+		// 	log_info("[LAME][load_sessions] session %lu: start = 0x%lx, end = 0x%lx", i, rs, re);
+		// }
 	}
 	fclose(f);
 	*starts = s; *ends = e; *count = cnt;
@@ -343,6 +343,47 @@ static int gpr_bitmap_init()
         return -errno;
     }
     uint64_t base = text_start;
+
+	// 5) Build page bitmap (1 byte per page, default page_size=64 configurable via AVX_PAGE_SIZE)
+    uint64_t pgsz_factor = cfg_lame_bitmap_pgsz_factor;
+    uint64_t text_len = (text_end > text_start) ? (text_end - text_start) : 0;
+    uint64_t num_pages = (text_len >> pgsz_factor) + 1;
+    unsigned char *bitmap = NULL;
+    if (num_pages > 0) bitmap = (unsigned char*)calloc(num_pages, 1);
+    if (bitmap) {
+        // mark pages: sessions are inclusive on both ends
+        for (size_t i = 0; i < count; i++) {
+			uint64_t s = rel_starts[i];
+			uint64_t e = rel_ends[i];
+			if (e <= s) continue;
+			e = (e+text_start >= text_end) ? text_end : e;
+			uint64_t start_idx = (s & ((1<<pgsz_factor)-1)) ? (s>>pgsz_factor)+1 : s>>pgsz_factor;
+			uint64_t end_idx = (e & ((1<<pgsz_factor)-1)) ? (e>>pgsz_factor)-1 : e>>pgsz_factor;
+			if (end_idx >= num_pages) end_idx = num_pages - 1;
+			for (uint64_t p = start_idx; p <= end_idx; p++) bitmap[p] = 1;
+			/* tmp debug */
+			if (i < 10) {
+				log_info("[LAME][gpr_bitmap_init] session %lu: start = 0x%lx, end = 0x%lx, start_idx = %lu, end_idx = %lu", 
+					i, s, e, start_idx, end_idx);
+			}
+        }
+		
+        log_info("[LAME] gpr bitmap has %lu pages, page size = %lu bytes, start = 0x%lx, end = 0x%lx", 
+				num_pages, 1 << pgsz_factor, text_start, text_end);
+		gpr_bitmap = bitmap;
+		gpr_bitmap_start = text_start;
+		gpr_bitmap_end = text_end;
+		gpr_bitmap_size = num_pages;
+		free(rel_starts); 
+		free(rel_ends);
+		return 0;
+    } else {
+        log_err("[LAME] gpr bitmap not allocated (num_pages=%lu)", num_pages);
+        free(bitmap); 
+		free(rel_starts); 
+		free(rel_ends);
+        return -EINVAL;
+    }
 }
 
 /* register lame handler via ioctl */
