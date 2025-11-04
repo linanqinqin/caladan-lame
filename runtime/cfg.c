@@ -26,6 +26,7 @@ unsigned int cfg_lame_bundle_size = LAME_BUNDLE_SIZE_DEFAULT;
 unsigned int cfg_lame_tsc = LAME_TSC_OFF;
 unsigned int cfg_lame_register = RT_LAME_REGISTER_NONE;
 unsigned int cfg_lame_stall_cycles = 0;
+unsigned int cfg_emulation_lame_stall_cycles = 0;
 /* end */
 
 /*
@@ -291,6 +292,17 @@ static int parse_runtime_lame_register(const char *name, const char *val)
 	
 	return 0;
 }
+
+static int parse_emulation_lame_stall_cycles(const char *name, const char *val)
+{
+	int tmp = atoi(val);
+	if (tmp <= 0) {
+		log_err("runtime_emulation_lame_stall_cycles must be a positive integer, got %s", val);
+		return -EINVAL;
+	}
+	cfg_emulation_lame_stall_cycles = tmp;
+	return 0;
+}
 /* end */
 
 static int parse_mac_address(const char *name, const char *val)
@@ -464,6 +476,7 @@ static const struct cfg_handler cfg_handlers[] = {
 	{ "runtime_lame_bundle_size", parse_runtime_lame_bundle_size, false },
 	{ "runtime_lame_tsc", parse_runtime_lame_tsc, false },
 	{ "runtime_lame_register", parse_runtime_lame_register, false },
+	{ "emulation_lame_stall_cycles", parse_emulation_lame_stall_cycles, false },
 	/* end */
 	{ "static_arp", parse_static_arp_entry, false },
 	{ "log_level", parse_log_level, false },

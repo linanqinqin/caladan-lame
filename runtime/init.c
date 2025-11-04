@@ -404,9 +404,10 @@ static int lame_init(void)
 		if (ret < 0) {
 			log_err("[errno %d] ioctl LAME_REGISTER failed", errno);
 		} else {
-			log_notice("LAME handler registered at %p [bundle size: %u][mode: %s]", 
+			log_notice("LAME handler registered at %p [bundle size: %u][mode: %s][stall: %lu]", 
 				(void *)arg.handler_addr, cfg_lame_bundle_size, 
-				cfg_lame_register == RT_LAME_REGISTER_INT ? "int" : (cfg_lame_register == RT_LAME_REGISTER_PMU ? "pmu" : "stall"));
+				cfg_lame_register == RT_LAME_REGISTER_INT ? "int" : (cfg_lame_register == RT_LAME_REGISTER_PMU ? "pmu" : "stall"),
+				cfg_emulation_lame_stall_cycles);
 		}
 		close(lamedev);
 	}

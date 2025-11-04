@@ -20,6 +20,7 @@ DEFINE_PERTHREAD(uint64_t, lame_counter_in_preempt) = 0;
 
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
+extern unsigned int cfg_emulation_lame_stall_cycles;
 
 /**
  * lame_bundle_init - initializes a LAME bundle for a kthread
@@ -622,7 +623,9 @@ __always_inline __nofp void lame_handle_bret(uint64_t *ret) {
 }
 
 __always_inline __nofp void lame_stall(void) {
-    _tpause(0, __rdtsc() + 600UL);
+	if (cfg_emulation_lame_stall_cycles > 0) {
+    	_tpause(0, __rdtsc() + cfg_emulation_lame_stall_cycles);
+	}
 }
 
 __always_inline __nofp void lame_handle_bret_slowpath(void) {
