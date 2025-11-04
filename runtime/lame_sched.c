@@ -575,11 +575,15 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 	/* Update __self to point to the new uthread */
 	perthread_store(__self, next_th);
 
+#ifdef CONFIG_LAME_TSC
 	/* increment total LAMEs counter */
 	k->lame_bundle.total_lames++; 
+#endif
 
 	if (unlikely(needs_xsave(rip))) {
+#ifdef CONFIG_LAME_TSC
 		uint64_t tsc_start = __rdtsc();
+#endif
 		/* xsave */
 		xsave_buf = alloca(xsave_max_size + 64); 	/* allocate buffer for xsave area on stack */
 		xsave_buf = (unsigned char *)align_up((uintptr_t)xsave_buf, 64); 	/* align to 64 bytes */
@@ -587,18 +591,24 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 		active_xstates = __builtin_ia32_xgetbv(0); 	/* get active xstates */
 		__builtin_ia32_xsavec64(xsave_buf, active_xstates); 	/* save state */
 
+#ifdef CONFIG_LAME_TSC
 		/* increment total xsave LAMEs counter */
 		k->lame_bundle.total_cycles += __rdtsc() - tsc_start;
 		k->lame_bundle.total_xsave_lames++; 
+#endif
 
 		/* Call __lame_jmp_thread_direct to perform context switch */
 		__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
 
+#ifdef CONFIG_LAME_TSC
 		tsc_start = __rdtsc();
+#endif
 		/* This point is reached when switching back to this thread */
 		/* restore xsave state */
 		__builtin_ia32_xrstor64(xsave_buf, active_xstates); 	
+#ifdef CONFIG_LAME_TSC
 		k->lame_bundle.total_cycles += __rdtsc() - tsc_start;
+#endif
 	}	
 	else {
 		/* Call __lame_jmp_thread_direct to perform context switch */

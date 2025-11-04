@@ -12,5 +12,5 @@ CONFIG_CLANG=n
 CONFIG_SPLIT_TX=n
 # Don't compile with UINTR instructions (useful for out-of-date compilers)
 CONFIG_NO_UINTR=n
-# Enable TSC accounting in LAME handler (for measuring LAME handler overhead)
+# Enable TSC accounting and other stats in LAME 
 CONFIG_LAME_TSC=n
