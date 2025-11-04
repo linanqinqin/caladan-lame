@@ -316,7 +316,6 @@ static int lame_init(void)
 	int lamedev;
 	struct lame_arg arg;
 	int ret;
-	void *handler_addr;
 	int register_mode;
 
 	if (cfg_lame_register == RT_LAME_REGISTER_NONE) {
@@ -331,49 +330,22 @@ static int lame_init(void)
     }
     else {
 		arg.present = 1;
-		
-		if (cfg_lame_tsc != LAME_TSC_OFF) {
-			if (cfg_lame_bundle_size != 2) {
-				log_err("LAME TSC measurement mode is only supported for bundle size 2, got %u", cfg_lame_bundle_size);
-				return -EINVAL;
-			}
-
-			/* Choose handler based on TSC measurement mode */
-			if (cfg_lame_tsc == LAME_TSC_PRETEND) {
-				handler_addr = (void *)__lame_entry2_pretend;
-			} else {
-				handler_addr = (void *)__lame_entry_nop;
-			}
-
-			log_warn("WARNING: in LAME TSC measurement mode (%s)", 
-					cfg_lame_tsc == LAME_TSC_PRETEND ? "pretend" : "nop");
-		}
-		else {
-			/* Choose handler based on bundle size for optimal performance */
-			if (cfg_lame_bundle_size == 2) {
-				handler_addr = (void *)__lame_entry2;
-			} else {
-				handler_addr = (void *)__lame_entry;
-			}
-		}
-		
-		arg.handler_addr = (__u64)handler_addr;
 
 		/* select the register mode */
-		/* via INT*/
 		if (cfg_lame_register == RT_LAME_REGISTER_INT) {
+			/* via INT*/
 			register_mode = LAME_REGISTER_INT;
-		/* via PMU, with LAME switching */
+			arg.handler_addr = (__u64)__lame_entry;
 		} else if (cfg_lame_register == RT_LAME_REGISTER_PMU) {
+			/* via PMU, with LAME switching */
 			register_mode = LAME_REGISTER_PMU;
 			arg.handler_addr = (__u64)__lame_entry_bret;
-		/* via PMU, with stall emulation */
 		} else if (cfg_lame_register == RT_LAME_REGISTER_STALL) {
+			/* via PMU, with stall emulation */
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
 			arg.handler_addr = (__u64)__lame_entry_stall_bret;
-		/* via PMU, with nop */
 		} else {
-			/* nop */
+			/* via PMU, with nop */
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
 			arg.handler_addr = (__u64)__lame_entry_nop_bret;
 		}
