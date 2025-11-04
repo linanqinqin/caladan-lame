@@ -503,7 +503,6 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
 	k->lame_bundle.active = 0;
 }
 
-extern uint64_t cfg_lame_bitmap_pgsz_factor;
 extern uint64_t text_section_start;
 extern uint64_t text_section_end;
 extern uint64_t gpr_bitmap_size;
@@ -625,7 +624,6 @@ __always_inline __nofp void lame_handle_bret(uint64_t *ret) {
 __always_inline __nofp void lame_stall(void) {
 
 	struct kthread *k = myk();
-	k->lame_bundle.total_lames++; /* use this field for skipped LAMEs, for now */
 	
     _tpause(0, __rdtsc() + 600ULL);
 }

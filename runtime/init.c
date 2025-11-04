@@ -165,8 +165,6 @@ uint64_t avx_bitmap_size = 0;
 unsigned char *gpr_bitmap = NULL;
 uint64_t gpr_bitmap_size = 0;
 
-extern uint64_t cfg_lame_bitmap_pgsz_factor; 
-
 static int readlink_exe(char *buf, size_t sz) {
 	ssize_t n = readlink("/proc/self/exe", buf, sz - 1);
 	if (n < 0) return -1;
@@ -267,7 +265,6 @@ static int gpr_bitmap_init()
         free(rel_ends);
         return -errno;
     }
-    uint64_t base = text_start;
 
 	// 5) Build page bitmap (1 byte per page, default page_size=64 configurable via AVX_PAGE_SIZE)
     uint64_t pgsz_factor = LAME_BITMAP_PGSZ_FACTOR;
