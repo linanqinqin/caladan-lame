@@ -622,10 +622,7 @@ __always_inline __nofp void lame_handle_bret(uint64_t *ret) {
 }
 
 __always_inline __nofp void lame_stall(void) {
-
-	struct kthread *k = myk();
-	
-    _tpause(0, __rdtsc() + 600ULL);
+    _tpause(0, __rdtsc() + 600UL);
 }
 
 __always_inline __nofp void lame_handle_bret_slowpath(void) {
