@@ -440,15 +440,10 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	/* linanqinqin */
 
 	/* construct the bitmap for gpr sessions */
-	if (cfg_lame_bitmap_pgsz_factor >= 0) {
-		ret = gpr_bitmap_init();
-		if (ret) {
-			log_err("gpr bitmap init failed, ret = %d", ret);
-			return ret;
-		}
-	}
-	else {
-		log_warn("WARNING: GPR bitmap not enabled");
+	ret = gpr_bitmap_init();
+	if (ret) {
+		log_err("gpr bitmap init failed, ret = %d", ret);
+		return ret;
 	}
 
 	/* Print the address of __lame_entry handler */
