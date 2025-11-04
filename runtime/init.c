@@ -344,11 +344,11 @@ static int gpr_bitmap_init()
     uint64_t base = text_start;
 
 	// 5) Build page bitmap (1 byte per page, default page_size=64 configurable via AVX_PAGE_SIZE)
-    uint64_t pgsz_factor = cfg_lame_bitmap_pgsz_factor;
+    uint64_t pgsz_factor = LAME_BITMAP_PGSZ_FACTOR;
     uint64_t text_len = (text_end > text_start) ? (text_end - text_start) : 0;
     uint64_t num_pages = (text_len >> pgsz_factor) + 1;
     unsigned char *bitmap = NULL;
-    if (num_pages > 0) bitmap = (unsigned char*)calloc(num_pages, 1);
+    if (num_pages > 0) bitmap = (unsigned char*)calloc((num_pages>>LAME_BITMAP_BYTE_SHIFT)+1, 1);
     if (bitmap) {
         // mark pages: sessions are inclusive on both ends
         for (size_t i = 0; i < count; i++) {
@@ -359,7 +359,8 @@ static int gpr_bitmap_init()
 			uint64_t start_idx = (s & ((1UL<<pgsz_factor)-1)) ? (s>>pgsz_factor)+1 : s>>pgsz_factor;
 			uint64_t end_idx = (e>>pgsz_factor)-1; 
 			if (end_idx >= num_pages) end_idx = num_pages - 1;
-			for (uint64_t p = start_idx; p <= end_idx; p++) bitmap[p] = 1;
+			for (uint64_t p = start_idx; p <= end_idx; p++) 
+				bitmap[p >> LAME_BITMAP_BYTE_SHIFT] |= (1 << (p & LAME_BITMAP_BYTE_MASK));
 			/* tmp debug */
 			if (i < 10) {
 				log_info("[LAME][gpr_bitmap_init] session %lu: start = 0x%lx, end = 0x%lx, start_idx = %lu, end_idx = %lu", 

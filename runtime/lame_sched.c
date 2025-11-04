@@ -525,9 +525,9 @@ static __always_inline __nofp bool needs_xsave_debug(uint64_t rip)
 		perthread_store(decisions[idx], -1);
 		return true;
 	}
-	uint64_t page_idx = (rip - text_section_start) >> cfg_lame_bitmap_pgsz_factor;
-	perthread_store(decisions[idx], gpr_bitmap[page_idx]);
-	return gpr_bitmap[page_idx]==0;
+	uint64_t page_idx = (rip - text_section_start) >> LAME_BITMAP_PGSZ_FACTOR;
+	perthread_store(decisions[idx], (gpr_bitmap[page_idx>>LAME_BITMAP_BYTE_SHIFT] & (1 << (page_idx & LAME_BITMAP_BYTE_MASK))) == 0);
+	return (gpr_bitmap[page_idx>>LAME_BITMAP_BYTE_SHIFT] & (1 << (page_idx & LAME_BITMAP_BYTE_MASK))) == 0;
 }
 
 static __always_inline __nofp bool needs_xsave(uint64_t rip) 
@@ -536,8 +536,8 @@ static __always_inline __nofp bool needs_xsave(uint64_t rip)
 		/* rip is not in the bitmap range; xsave by default */
 		return true;
 	}
-	uint64_t page_idx = (rip - text_section_start) >> cfg_lame_bitmap_pgsz_factor;
-	return gpr_bitmap[page_idx]==0;
+	uint64_t page_idx = (rip - text_section_start) >> LAME_BITMAP_PGSZ_FACTOR;
+	return (gpr_bitmap[page_idx>>LAME_BITMAP_BYTE_SHIFT] & (1 << (page_idx & LAME_BITMAP_BYTE_MASK))) == 0;
 }
 
 /**
