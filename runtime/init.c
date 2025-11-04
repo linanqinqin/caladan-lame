@@ -24,6 +24,7 @@
 extern unsigned int cfg_lame_bundle_size;
 extern unsigned int cfg_lame_tsc;
 extern unsigned int cfg_lame_register;
+extern unsigned int cfg_emulation_lame_stall_cycles;
 /* end */
 
 #include "defs.h"
