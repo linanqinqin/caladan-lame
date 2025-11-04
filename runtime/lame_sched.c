@@ -508,12 +508,12 @@ extern uint64_t text_section_start;
 extern uint64_t text_section_end;
 extern uint64_t gpr_bitmap_size;
 extern unsigned char *gpr_bitmap;
-/* tmp debug */
+
+#ifdef CONFIG_DEBUG
 DEFINE_PERTHREAD(uint64_t, rips[10]);
-/* -1=not in bitmap, 0=no xsave, 1=needs xsave*/
-DEFINE_PERTHREAD(int, decisions[10]);
+DEFINE_PERTHREAD(int, decisions[10]); /* -1=not in bitmap, 0=not SIMD-free (needs xsave), 1=SIMD-free (no xsave)*/
 DEFINE_PERTHREAD(int, rip_idx) = 0;
-static __always_inline __nofp bool needs_xsave_debug(uint64_t rip) 
+static __always_inline __nofp bool needs_xsave(uint64_t rip) 
 {
 	int idx = perthread_read(rip_idx);
 	if (idx < 9) {
@@ -529,7 +529,7 @@ static __always_inline __nofp bool needs_xsave_debug(uint64_t rip)
 	perthread_store(decisions[idx], (gpr_bitmap[page_idx>>LAME_BITMAP_BYTE_SHIFT] & (1 << (page_idx & LAME_BITMAP_BYTE_MASK))) == 0);
 	return (gpr_bitmap[page_idx>>LAME_BITMAP_BYTE_SHIFT] & (1 << (page_idx & LAME_BITMAP_BYTE_MASK))) == 0;
 }
-
+#else
 static __always_inline __nofp bool needs_xsave(uint64_t rip) 
 {
 	if (rip < text_section_start || rip >= text_section_end) {
@@ -539,6 +539,7 @@ static __always_inline __nofp bool needs_xsave(uint64_t rip)
 	uint64_t page_idx = (rip - text_section_start) >> LAME_BITMAP_PGSZ_FACTOR;
 	return (gpr_bitmap[page_idx>>LAME_BITMAP_BYTE_SHIFT] & (1 << (page_idx & LAME_BITMAP_BYTE_MASK))) == 0;
 }
+#endif
 
 /**
  * lame_handle - handles LAME exception and performs context switch
@@ -673,10 +674,12 @@ void lame_print_tsc_counters(void)
 				 k->lame_bundle.total_xsave_lames,
 				 perthread_read(lame_counter_in_lame), perthread_read(lame_counter_in_preempt),
 				 (uint8_t)perthread_read(in_lame));
+#ifdef CONFIG_DEBUG
 		for (int j = 0; j < 10; j++) {
 			log_warn("[LAME][kthread:%u] rip=%lx; decision=%d", i, 
 				perthread_read(rips[j]), perthread_read(decisions[j]));
 		}
+#endif
 	}
 }
 /* end */
