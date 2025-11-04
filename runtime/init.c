@@ -174,27 +174,43 @@ static int readlink_exe(char *buf, size_t sz) {
 
 // Return text mapping [start,end) of the main executable from /proc/self/maps
 static int get_main_exec_text_range(uint64_t *start_out, uint64_t *end_out) {
+
     char exe_path[PATH_MAX];
-    if (readlink_exe(exe_path, sizeof(exe_path)) != 0) return -1;
+    if (readlink_exe(exe_path, sizeof(exe_path)) != 0) {
+		return -1;
+	}
+	
     FILE *maps = fopen("/proc/self/maps", "r");
-    if (!maps) return -1;
+    if (!maps) {
+		return -1;
+	}
+
     char line[4096];
     while (fgets(line, sizeof(line), maps)) {
         uint64_t start = 0, end = 0;
         char perms[8] = {0};
         unsigned long offset = 0;
+
         if (sscanf(line, "%" SCNx64 "-%" SCNx64 " %7s %lx", &start, &end, perms, &offset) != 4) continue;
         if (perms[0] != 'r' || perms[2] != 'x') continue;
-        char *path = strchr(line, '/');
+        
+		char *path = strchr(line, '/');
         if (!path) continue;
-        size_t l = strlen(path);
-        if (l && path[l - 1] == '\n') path[l - 1] = '\0';
+        
+		size_t l = strlen(path);
+        if (l && path[l - 1] == '\n') { 
+			path[l - 1] = '\0'; 
+		}
+
         char exe_buf[PATH_MAX];
         if (readlink_exe(exe_buf, sizeof(exe_buf)) != 0) continue;
         if (strcmp(path, exe_buf) != 0) continue;
+
         fclose(maps);
+
         *start_out = start;
         *end_out = end; // end is exclusive as per /proc/self/maps
+		
         return 0;
     }
     fclose(maps);
@@ -202,21 +218,43 @@ static int get_main_exec_text_range(uint64_t *start_out, uint64_t *end_out) {
 }
 
 static int load_sessions(const char *file, uint64_t **starts, uint64_t **ends, size_t *count) {
+
 	FILE *f = fopen(file, "rb");
 	if (!f) return -1;
-	if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
+
+	if (fseek(f, 0, SEEK_END) != 0) { 
+		fclose(f); 
+		return -1; 
+	}
+
 	long sz = ftell(f);
-	if (sz < 0) { fclose(f); return -1; }
+	if (sz < 0) { 
+		fclose(f); 
+		return -1; 
+	}
 	rewind(f);
-	if (sz % 16 != 0) { fclose(f); return -1; }
+	if (sz % 16 != 0) { 
+		fclose(f); 
+		return -1; 
+	}
+
 	size_t cnt = (size_t)(sz / 16);
 	uint64_t *s = (uint64_t*)calloc(cnt, sizeof(uint64_t));
 	uint64_t *e = (uint64_t*)calloc(cnt, sizeof(uint64_t));
-	if (!s || !e) { fclose(f); free(s); free(e); return -1; }
+	if (!s || !e) { 
+		fclose(f); 
+		free(s); 
+		free(e); 
+		return -1; 
+	}
+
 	for (size_t i = 0; i < cnt; i++) {
 		uint64_t rs = 0, re = 0;
 		if (fread(&rs, sizeof(uint64_t), 1, f) != 1 || fread(&re, sizeof(uint64_t), 1, f) != 1) {
-			fclose(f); free(s); free(e); return -1;
+			fclose(f); 
+			free(s); 
+			free(e); 
+			return -1;
 		}
 		s[i] = rs;
 		e[i] = re;
@@ -227,7 +265,11 @@ static int load_sessions(const char *file, uint64_t **starts, uint64_t **ends, s
 #endif
 	}
 	fclose(f);
-	*starts = s; *ends = e; *count = cnt;
+
+	*starts = s; 
+	*ends = e; 
+	*count = cnt;
+
 	return 0;
 }
 
@@ -271,19 +313,25 @@ static int gpr_bitmap_init()
     uint64_t text_len = (text_end > text_start) ? (text_end - text_start) : 0;
     uint64_t num_pages = (text_len >> pgsz_factor) + 1;
     unsigned char *bitmap = NULL;
-    if (num_pages > 0) bitmap = (unsigned char*)calloc((num_pages>>LAME_BITMAP_BYTE_SHIFT)+1, 1);
+    if (num_pages > 0) {
+		bitmap = (unsigned char*)calloc((num_pages>>LAME_BITMAP_BYTE_SHIFT)+1, 1);
+	}
     if (bitmap) {
         // mark pages: sessions are inclusive on both ends
         for (size_t i = 0; i < count; i++) {
 			uint64_t s = rel_starts[i];
 			uint64_t e = rel_ends[i];
-			if (e <= s) continue;
-			e = (e+text_start >= text_end) ? text_end : e;
+
+			if (e <= s) continue; // skip invalid sessions
+			e = (e+text_start >= text_end) ? text_end : e; // clamp end if out of range (should never happen though)
+
 			uint64_t start_idx = (s & ((1UL<<pgsz_factor)-1)) ? (s>>pgsz_factor)+1 : s>>pgsz_factor;
 			uint64_t end_idx = (e>>pgsz_factor)-1; 
 			if (end_idx >= num_pages) end_idx = num_pages - 1;
-			for (uint64_t p = start_idx; p <= end_idx; p++) 
+
+			for (uint64_t p = start_idx; p <= end_idx; p++) {
 				bitmap[p >> LAME_BITMAP_BYTE_SHIFT] |= (1 << (p & LAME_BITMAP_BYTE_MASK));
+			}
 #ifdef CONFIG_DEBUG
 			if (i < 10) {
 				log_info("[LAME][gpr_bitmap_init] session %lu: start = 0x%lx, end = 0x%lx, start_idx = %lu, end_idx = %lu", 
@@ -291,15 +339,17 @@ static int gpr_bitmap_init()
 			}
 #endif
         }
-		
-        log_info("[LAME] gpr bitmap has %lu pages, page size = %lu bytes, start = 0x%lx, end = 0x%lx", 
-				num_pages, 1UL << pgsz_factor, text_start, text_end);
+
 		gpr_bitmap = bitmap;
 		text_section_start = text_start;
 		text_section_end = text_end;
 		gpr_bitmap_size = num_pages;
 		free(rel_starts); 
 		free(rel_ends);
+
+        log_info("[LAME] gpr bitmap has %lu pages, page size = %lu bytes, start = 0x%lx, end = 0x%lx", 
+				num_pages, 1UL << pgsz_factor, text_start, text_end);
+		
 		return 0;
     } else {
         log_err("[LAME] gpr bitmap not allocated (num_pages=%lu)", num_pages);
