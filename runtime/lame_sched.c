@@ -525,9 +525,9 @@ unsigned char* lame_xsave_buf_alloc(void)
 	/* Store original pointer right before aligned region for cleanup */
 	*(void **)(xs_buf - sizeof(void *)) = xs_buf_orig;
 
-	/* initialize with XSAVEC */
+	/* initialize with XSAVE */
 	active_xstates = __builtin_ia32_xgetbv(0);
-	__builtin_ia32_xsavec64(xs_buf, active_xstates);
+	__builtin_ia32_xsave64(xs_buf, active_xstates);
 
 	return xs_buf;
 }
@@ -622,7 +622,7 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 #endif
 		/* xsave */
 		active_xstates = __builtin_ia32_xgetbv(0); 	/* get active xstates */
-		__builtin_ia32_xsavec64(xsave_buf, active_xstates); 	/* save state */
+		__builtin_ia32_xsaveopt64(xsave_buf, active_xstates); 	/* save state */
 
 #ifdef CONFIG_LAME_TSC
 		/* increment total xsave LAMEs counter */
