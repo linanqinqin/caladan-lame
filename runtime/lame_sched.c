@@ -593,8 +593,6 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 {
 	struct kthread *k = myk();
 	thread_t *cur_th, *next_th;
-	unsigned char *xsave_buf;
-	unsigned long active_xstates;
 
 	/* If there is only one uthread in the bundle, no need to schedule */
 	if (unlikely(lame_bundle_get_used_count(k) <= 1)) {
@@ -617,13 +615,12 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 #endif
 
 	if (unlikely(needs_xsave(rip))) {
+		unsigned char *xsave_buf = cur_th->tf.xsave_area;
+		unsigned long active_xstates;
 #ifdef CONFIG_LAME_TSC
 		uint64_t tsc_start = __rdtsc();
 #endif
 		/* xsave */
-		xsave_buf = alloca(xsave_max_size + 64); 	/* allocate buffer for xsave area on stack */
-		xsave_buf = (unsigned char *)align_up((uintptr_t)xsave_buf, 64); 	/* align to 64 bytes */
-		__builtin_memset(xsave_buf + 512, 0, 64); 	/* zero xsave header */
 		active_xstates = __builtin_ia32_xgetbv(0); 	/* get active xstates */
 		__builtin_ia32_xsavec64(xsave_buf, active_xstates); 	/* save state */
 
