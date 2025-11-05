@@ -23,6 +23,11 @@ ifeq ($(CONFIG_LAME_TSC),y)
 FLAGS += -DCONFIG_LAME_TSC
 endif
 
+# LAME xsaveopt flag
+ifeq ($(CONFIG_LAME_XSAVEOPT),y)
+FLAGS += -DCONFIG_LAME_XSAVEOPT
+endif
+
 LDFLAGS = -T $(ROOT_PATH)/base/base.ld
 CC      ?= gcc
 LD      = $(CC)
