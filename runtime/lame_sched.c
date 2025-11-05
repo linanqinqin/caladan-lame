@@ -593,7 +593,7 @@ static __always_inline __nofp bool needs_xsave(uint64_t rip)
 __attribute__((optimize("O3")))
 __always_inline __nofp void lame_handle(uint64_t rip)
 {
-	struct kthread *k = myk();
+	struct kthread *k = perthread_read(mykthread);
 	thread_t *cur_th, *next_th;
 
 	/* If there is only one uthread in the bundle, no need to schedule */
