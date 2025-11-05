@@ -877,7 +877,6 @@ static __always_inline thread_t *__thread_create(void)
 {
 	struct thread *th;
 	struct stack *s;
-	unsigned char *xs_buf;
 	
 	preempt_disable();
 	th = tcache_alloc(perthread_ptr(thread_pt));
@@ -895,6 +894,8 @@ static __always_inline thread_t *__thread_create(void)
 	th->last_cpu = myk()->curr_cpu;
 	
 	/* linanqinqin */
+#ifdef CONFIG_LAME_XSAVEOPT
+	unsigned char *xs_buf;
 	xs_buf = lame_xsave_buf_alloc();
 	if (unlikely(!xs_buf)) {
 		tcache_free(perthread_ptr(thread_pt), th);
@@ -902,6 +903,8 @@ static __always_inline thread_t *__thread_create(void)
 		preempt_enable();
 		return NULL;	
 	}
+	th->tf.xsave_area = xs_buf;
+#endif
 	/* end */
 	preempt_enable();
 
@@ -909,9 +912,6 @@ static __always_inline thread_t *__thread_create(void)
 	th->main_thread = false;
 	th->thread_ready = false;
 	th->thread_running = false;
-	/* linanqinqin */
-	th->tf.xsave_area = xs_buf;
-	/* end */
 
 	return th;
 }
@@ -1026,7 +1026,9 @@ static void thread_finish_exit(void)
 
 	stack_free(th->stack);
 	/* linanqinqin */
+#ifdef CONFIG_LAME_XSAVEOPT
 	lame_xsave_buf_free(th);
+#endif
 	/* end */
 	tcache_free(perthread_ptr(thread_pt), th);
 

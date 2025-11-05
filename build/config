@@ -14,3 +14,5 @@ CONFIG_SPLIT_TX=n
 CONFIG_NO_UINTR=n
 # Enable TSC accounting and other stats in LAME 
 CONFIG_LAME_TSC=n
+# Use xsaveopt for LAME context switch
+CONFIG_LAME_XSAVEOPT=y

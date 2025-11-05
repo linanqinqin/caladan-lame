@@ -505,6 +505,7 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
 	k->lame_bundle.active = 0;
 }
 
+#ifdef CONFIG_LAME_XSAVEOPT
 /* 
  * xsave buffer management
  */
@@ -539,6 +540,7 @@ void lame_xsave_buf_free(thread_t *th)
 	sfree(xs_buf_orig);
 	th->tf.xsave_area = NULL;
 }
+#endif
 
 extern uint64_t text_section_start;
 extern uint64_t text_section_end;
@@ -615,14 +617,23 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 #endif
 
 	if (unlikely(needs_xsave(rip))) {
-		unsigned char *xsave_buf = cur_th->tf.xsave_area;
+		unsigned char *xsave_buf;
 		unsigned long active_xstates;
 #ifdef CONFIG_LAME_TSC
 		uint64_t tsc_start = __rdtsc();
 #endif
 		/* xsave */
+#ifdef CONFIG_LAME_XSAVEOPT
+		xsave_buf = cur_th->tf.xsave_area;
 		active_xstates = __builtin_ia32_xgetbv(0); 	/* get active xstates */
 		__builtin_ia32_xsaveopt64(xsave_buf, active_xstates); 	/* save state */
+#else
+		xsave_buf = alloca(xsave_max_size + 64); 	/* allocate buffer for xsave area on stack */
+		xsave_buf = (unsigned char *)align_up((uintptr_t)xsave_buf, 64); 	/* align to 64 bytes */
+		__builtin_memset(xsave_buf + 512, 0, 64); 	/* zero xsave header */
+		active_xstates = __builtin_ia32_xgetbv(0); 	/* get active xstates */
+		__builtin_ia32_xsavec64(xsave_buf, active_xstates); 	/* save state */
+#endif
 
 #ifdef CONFIG_LAME_TSC
 		/* increment total xsave LAMEs counter */
@@ -636,9 +647,11 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 #ifdef CONFIG_LAME_TSC
 		tsc_start = __rdtsc();
 #endif
+
 		/* This point is reached when switching back to this thread */
 		/* restore xsave state */
-		__builtin_ia32_xrstor64(xsave_buf, active_xstates); 	
+		__builtin_ia32_xrstor64(xsave_buf, active_xstates); 
+	
 #ifdef CONFIG_LAME_TSC
 		k->lame_bundle.total_cycles += __rdtsc() - tsc_start;
 #endif
