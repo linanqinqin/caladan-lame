@@ -13,6 +13,3 @@
 [submodule "deps/pcm"]
 	path = deps/pcm
 	url = https://github.com/opcm/pcm.git
-[submodule "apps/gapbs"]
-	path = apps/gapbs
-	url = https://github.com/linanqinqin/gapbs.git
