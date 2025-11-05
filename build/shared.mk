@@ -70,8 +70,8 @@ LDFLAGS += -rdynamic
 else
 FLAGS += -DNDEBUG -O3
 ifeq ($(CONFIG_OPTIMIZE),y)
-FLAGS += -march=native -flto=auto -ffat-lto-objects -ffast-math -DBUILD_OPTIMIZED=1
-LDFLAGS += -flto=auto
+FLAGS += -march=native -ffast-math -DBUILD_OPTIMIZED=1
+# LDFLAGS += -flto=auto
 ifeq ($(CONFIG_CLANG),y)
 LDFLAGS += -flto
 endif
