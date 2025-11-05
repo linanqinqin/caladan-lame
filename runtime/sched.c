@@ -895,22 +895,13 @@ static __always_inline thread_t *__thread_create(void)
 	th->last_cpu = myk()->curr_cpu;
 	
 	/* linanqinqin */
-	unsigned char *xs_buf_orig = (unsigned char *)__szalloc(xsave_max_size + 64 + sizeof(void *));
-	uint64_t active_xstates;
-	if (unlikely(!xs_buf_orig)) {
+	xs_buf = lame_xsave_buf_alloc();
+	if (unlikely(!xs_buf)) {
 		tcache_free(perthread_ptr(thread_pt), th);
 		stack_free(s);
 		preempt_enable();
-		return NULL;
+		return NULL;	
 	}
-	/* Align to 64 bytes, leaving space for storing the original pointer */
-	xs_buf = (unsigned char *)align_up((uintptr_t)(xs_buf_orig + sizeof(void *)), 64);
-	/* Store original pointer right before aligned region for cleanup */
-	*(void **)(xs_buf - sizeof(void *)) = xs_buf_orig;
-	/* Zero xsave header and initialize with XSAVEC */
-	__builtin_memset(xs_buf + 512, 0, 64);
-	active_xstates = __builtin_ia32_xgetbv(0);
-	__builtin_ia32_xsavec64(xs_buf, active_xstates);
 	/* end */
 	preempt_enable();
 
@@ -1035,11 +1026,7 @@ static void thread_finish_exit(void)
 
 	stack_free(th->stack);
 	/* linanqinqin */
-	/* Free xsave buffer if allocated */
-	if (th->tf.xsave_area) {
-		void *xs_buf_orig = *(void **)(th->tf.xsave_area - sizeof(void *));
-		sfree(xs_buf_orig);
-	}
+	lame_xsave_buf_free(th);
 	/* end */
 	tcache_free(perthread_ptr(thread_pt), th);
 

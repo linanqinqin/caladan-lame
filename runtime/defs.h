@@ -505,6 +505,10 @@ extern void lame_bundle_set_running_true_all(struct kthread *k);
 /* TSC accounting functions */
 extern void lame_print_tsc_counters(void);
 
+/* xsave buffer management functions */
+extern unsigned char* lame_xsave_buf_alloc(void);
+extern void lame_xsave_buf_free(thread_t *th);
+
 /* LAME scheduling functions */
 extern void lame_handle(uint64_t rip);
 extern void lame_handle_ret(uint64_t *ret);

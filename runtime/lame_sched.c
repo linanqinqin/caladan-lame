@@ -9,6 +9,7 @@
 #include <x86intrin.h>
 
 #include <base/log.h>
+#include <runtime/smalloc.h>
 
 #include "defs.h"
 
@@ -502,6 +503,41 @@ void lame_sched_bundle_dismantle_nolock(struct kthread *k)
 	/* Reset bundle state */
 	k->lame_bundle.used = 0;
 	k->lame_bundle.active = 0;
+}
+
+/* 
+ * xsave buffer management
+ */
+unsigned char* lame_xsave_buf_alloc(void) 
+{
+	BUG_ON(xsave_max_size == 0);
+
+	unsigned char *xs_buf_orig = (unsigned char *)__szalloc(xsave_max_size + 64 + sizeof(void *));
+	unsigned char *xs_buf;
+	uint64_t active_xstates;
+
+	if (unlikely(!xs_buf_orig)) {
+		return NULL;
+	}
+
+	/* Align to 64 bytes, leaving space for storing the original pointer */
+	xs_buf = (unsigned char *)align_up((uintptr_t)(xs_buf_orig + sizeof(void *)), 64);
+	/* Store original pointer right before aligned region for cleanup */
+	*(void **)(xs_buf - sizeof(void *)) = xs_buf_orig;
+
+	/* initialize with XSAVEC */
+	active_xstates = __builtin_ia32_xgetbv(0);
+	__builtin_ia32_xsavec64(xs_buf, active_xstates);
+
+	return xs_buf;
+}
+
+void lame_xsave_buf_free(thread_t *th)
+{
+	BUG_ON(!th->tf.xsave_area);
+	void *xs_buf_orig = *(void **)(th->tf.xsave_area - sizeof(void *));
+	sfree(xs_buf_orig);
+	th->tf.xsave_area = NULL;
 }
 
 extern uint64_t text_section_start;
