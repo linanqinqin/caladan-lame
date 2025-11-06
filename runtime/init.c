@@ -336,7 +336,7 @@ static int gpr_bitmap_init()
 			if (end_idx >= num_pages) end_idx = num_pages - 1;
 
 			for (uint64_t p = start_idx; p <= end_idx; p++) {
-				bitmap[p >> LAME_BITMAP_BYTE_SHIFT] |= (1 << (p & LAME_BITMAP_BYTE_MASK));
+				bitmap[p >> LAME_BITMAP_BYTE_SHIFT] |= (1UL << (p & LAME_BITMAP_BYTE_MASK));
 			}
 #ifdef CONFIG_DEBUG
 			if (i < 10) {
