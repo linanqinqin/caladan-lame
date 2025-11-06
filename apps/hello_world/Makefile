@@ -1,74 +1,39 @@
 # Makefile for hello_world application
 ROOT_PATH=../..
-include $(ROOT_PATH)/build/shared.mk
-
-hello_world_src = hello_world.c
-hello_world_obj = $(hello_world_src:.c=.o)
-
-threads_src = threads.c
-threads_obj = $(threads_src:.c=.o)
-
-network_src = network.c
-network_obj = $(network_src:.c=.o)
-
-int_src = int.c
-int_obj = $(int_src:.c=.o)
-
-parse_lame_src = parse_lame.c
-parse_lame_obj = $(parse_lame_src:.c=.o)
-
-parse_bundle_src = parse_bundle.c
-parse_bundle_obj = $(parse_bundle_src:.c=.o)
-
-matmul_src = matmul.c
-matmul_obj = $(matmul_src:.c=.o)
+include $(ROOT_PATH)/build/shared-apps.mk
 
 # Define target categories
 caladan_targets = hello_world threads network int
-native_targets = parse_lame parse_bundle matmul threads_native
+native_targets = parse_lame parse_bundle matmul
+all_targets = $(caladan_targets) $(native_targets) threads_native
+
+# Collect all source files
+caladan_src = $(addsuffix .c, $(caladan_targets))
+native_src = $(addsuffix .c, $(native_targets))
+all_src = $(caladan_src) $(native_src)
+
+# Object files and dependencies
+obj = $(all_src:.c=.o)
+dep = $(obj:.o=.d)
 
 # must be first
-all: $(caladan_targets) $(native_targets)
+all: $(all_targets)
 
 lib_shim = -Wl,--whole-archive $(ROOT_PATH)/shim/libshim.a -ldl -Wl,--no-whole-archive
 
-hello_world: $(hello_world_obj) $(RUNTIME_DEPS)
-	$(LD) $(LDFLAGS) -o $@ $(hello_world_obj) \
+# Pattern rule for Caladan targets
+$(caladan_targets): %: %.o $(RUNTIME_DEPS)
+	$(LD) $(LDFLAGS) -o $@ $< \
 	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
 	@$(ROOT_PATH)/scripts/verify_shim.sh $@
 
-threads: $(threads_obj) $(RUNTIME_DEPS)
-	$(LD) $(LDFLAGS) -o $@ $(threads_obj) \
-	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
-	@$(ROOT_PATH)/scripts/verify_shim.sh $@
-
-network: $(network_obj) $(RUNTIME_DEPS)
-	$(LD) $(LDFLAGS) -o $@ $(network_obj) \
-	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
-	@$(ROOT_PATH)/scripts/verify_shim.sh $@
-
-int: $(int_obj) $(RUNTIME_DEPS)
-	$(LD) $(LDFLAGS) -o $@ $(int_obj) \
-	-Wl,--wrap=main $(lib_shim) $(RUNTIME_LIBS)
-	@$(ROOT_PATH)/scripts/verify_shim.sh $@
-
-parse_lame: $(parse_lame_obj)
-	$(CC) $(CFLAGS) -o $@ $(parse_lame_obj)
-
-parse_bundle: $(parse_bundle_obj)
-	$(CC) $(CFLAGS) -o $@ $(parse_bundle_obj)
-
-matmul: $(matmul_obj)
-	$(CC) $(CFLAGS) -o $@ $(matmul_obj)
+# Pattern rule for native targets
+$(native_targets): %: %.o
+	$(CC) $(CFLAGS) -o $@ $<
 
 # Native glibc version of threads (no Caladan runtime)
-threads_native: $(threads_obj)
-	$(CC) $(CFLAGS) -pthread -o $@ $(threads_obj)
-
-# general build rules for all targets
-src = $(hello_world_src) $(threads_src) $(network_src) $(int_src) $(parse_lame_src) $(parse_bundle_src) $(matmul_src)
-obj = $(src:.c=.o)
-dep = $(obj:.o=.d)
+threads_native: threads.o
+	$(CC) $(CFLAGS) -pthread -o $@ $<
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(dep)   # include all dep files in the makefile
@@ -83,4 +48,4 @@ endif
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(dep) hello_world threads network int parse_lame parse_bundle matmul threads_native 
+	rm -f $(obj) $(dep) $(all_targets) 
