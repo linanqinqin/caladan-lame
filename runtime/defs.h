@@ -122,7 +122,7 @@ extern void __lame_entry_bret_slowpath();
 /* LAME bitmap */
 #define LAME_BITMAP_PGSZ_FACTOR		6 /* 1 << 6 = 64 bytes per page by default */
 #define LAME_BITMAP_BYTE_SHIFT 		3 /* 1 << 3 = 8 bits per byte */
-#define LAME_BITMAP_BYTE_MASK 		0xFF
+#define LAME_BITMAP_BYTE_MASK 		0b111 /* 1 << 3 - 1 = 7 */
 
 /* uthread wrapper for bundle scheduling */
 struct lame_uthread_wrapper {
