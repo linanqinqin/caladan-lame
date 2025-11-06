@@ -3,7 +3,7 @@ ROOT_PATH=../..
 include $(ROOT_PATH)/build/shared-apps.mk
 
 # Define target categories
-caladan_targets = hello_world threads network int
+caladan_targets = hello_world threads network int mm
 native_targets = parse_lame parse_bundle matmul
 all_targets = $(caladan_targets) $(native_targets) threads_native
 
