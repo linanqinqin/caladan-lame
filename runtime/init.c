@@ -366,104 +366,6 @@ static int gpr_bitmap_init()
     }
 }
 
-/* tmp debug */
-unsigned char *gpr_bitmap_original = NULL;
-static int gpr_bitmap_init_original()
-{
-	// 1) Determine full path to executable
-    char exe_path[PATH_MAX];
-    if (readlink_exe(exe_path, sizeof(exe_path)) != 0) {
-		log_err("[LAME][gpr_bitmap_init] readlink_exe failed: %d", errno);
-        return -errno;
-    }
-
-    // 2) Build avxdump path: <exe_path>.avxdump
-    char gpr_path[PATH_MAX];
-    size_t elen = strlen(exe_path);
-    if (elen + strlen(".gprdump") + 1 >= sizeof(gpr_path)) {
-        log_err("[LAME][gpr_bitmap_init] gprdump path too long");
-        return -ENAMETOOLONG;
-    }
-    snprintf(gpr_path, sizeof(gpr_path), "%s.gprdump", exe_path);
-
-    // 3) Read sessions (RVAs) from avxdump file (headerless pairs of uint64)
-    uint64_t *rel_starts = NULL, *rel_ends = NULL; 
-	size_t count = 0;
-    if (load_sessions(gpr_path, &rel_starts, &rel_ends, &count) != 0) {
-        log_err("[LAME][gpr_bitmap_init] failed to read gpr sessions from %s", gpr_path);
-        return -errno;
-    }
-
-    // 4) Get runtime text mapping range for the main executable from /proc/self/maps
-    uint64_t text_start = 0, text_end = 0;
-    if (get_main_exec_text_range(&text_start, &text_end) != 0) {
-        log_err("[LAME][gpr_bitmap_init] failed to get runtime text range: %d", errno);
-        free(rel_starts);
-        free(rel_ends);
-        return -errno;
-    }
-    uint64_t base = text_start;
-
-	// 5) Build page bitmap (1 byte per page, default page_size=64 configurable via AVX_PAGE_SIZE)
-    uint64_t pgsz_factor = LAME_BITMAP_PGSZ_FACTOR;
-    uint64_t text_len = (text_end > text_start) ? (text_end - text_start) : 0;
-    uint64_t num_pages = (text_len >> pgsz_factor) + 1;
-    unsigned char *bitmap = NULL;
-    if (num_pages > 0) bitmap = (unsigned char*)calloc(num_pages, 1);
-    if (bitmap) {
-        // mark pages: sessions are inclusive on both ends
-        for (size_t i = 0; i < count; i++) {
-			uint64_t s = rel_starts[i];
-			uint64_t e = rel_ends[i];
-			if (e <= s) continue;
-			e = (e+text_start >= text_end) ? text_end : e;
-			uint64_t start_idx = (s & ((1UL<<pgsz_factor)-1)) ? (s>>pgsz_factor)+1 : s>>pgsz_factor;
-			uint64_t end_idx = (e>>pgsz_factor)-1; 
-			if (end_idx >= num_pages) end_idx = num_pages - 1;
-			for (uint64_t p = start_idx; p <= end_idx; p++) bitmap[p] = 1;
-			/* tmp debug */
-			// if (i < 10) {
-			// 	log_info("[LAME][gpr_bitmap_init] session %lu: start = 0x%lx, end = 0x%lx, start_idx = %lu, end_idx = %lu", 
-			// 		i, s, e, start_idx, end_idx);
-			// }
-        }
-		
-        log_info("[LAME] gpr bitmap has %lu pages, page size = %lu bytes, start = 0x%lx, end = 0x%lx", 
-				num_pages, 1UL << pgsz_factor, text_start, text_end);
-		gpr_bitmap_original = bitmap;
-		text_section_start = text_start;
-		text_section_end = text_end;
-		gpr_bitmap_size = num_pages;
-		free(rel_starts); 
-		free(rel_ends);
-		return 0;
-    } else {
-        log_err("[LAME] gpr bitmap not allocated (num_pages=%lu)", num_pages);
-        free(bitmap); 
-		free(rel_starts); 
-		free(rel_ends);
-        return -EINVAL;
-    }
-}
-
-static bool needs_xsave_using_bit(uint64_t rip) {
-	if (rip < text_section_start || rip >= text_section_end) {
-		/* rip is not in the bitmap range; xsave by default */
-		return true;
-	}
-	uint64_t page_idx = (rip - text_section_start) >> LAME_BITMAP_PGSZ_FACTOR;
-	return (gpr_bitmap[page_idx>>LAME_BITMAP_BYTE_SHIFT] & (1 << (page_idx & LAME_BITMAP_BYTE_MASK))) == 0;
-}
-static bool needs_xsave_using_byte(uint64_t rip) {
-	if (rip < text_section_start || rip >= text_section_end) {
-		/* rip is not in the bitmap range; xsave by default */
-		return true;
-	}
-	uint64_t page_idx = (rip - text_section_start) >> LAME_BITMAP_PGSZ_FACTOR;
-	return gpr_bitmap_original[page_idx]==0;
-}
-/* end tmp debug */
-
 /* register lame handler via ioctl */
 static int lame_init(void)
 {
@@ -571,15 +473,6 @@ int runtime_init(const char *cfgpath, thread_fn_t main_fn, void *arg)
 	if (ret) {
 		log_err("gpr bitmap init failed, ret = %d", ret);
 		return ret;
-	}
-	gpr_bitmap_init_original();
-	for (uint64_t rip = text_section_start; rip < text_section_end; rip++) {
-		bool bit = needs_xsave_using_bit(rip);
-		bool byte = needs_xsave_using_byte(rip);
-		if (bit != byte) {
-			log_err("[LAME] rip 0x%lx: bit = %d, byte = %d", rip, bit, byte);
-			return -1;
-		}
 	}
 
 	/* register lame handler via ioctl */
