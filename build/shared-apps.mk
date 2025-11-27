@@ -70,6 +70,7 @@ LDFLAGS += -rdynamic
 else
 FLAGS += -DNDEBUG -O3
 ifeq ($(CONFIG_OPTIMIZE),y)
+# FLAGS += -march=x86-64 -mno-avx -mno-avx2 -mno-avx512f -mno-fma -ffast-math -DBUILD_OPTIMIZED=1
 FLAGS += -march=native -ffast-math -DBUILD_OPTIMIZED=1
 # LDFLAGS += -flto=auto
 ifeq ($(CONFIG_CLANG),y)
