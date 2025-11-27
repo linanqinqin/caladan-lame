@@ -24,4 +24,4 @@ make threads matmul
 # setup machine and start iokerneld
 cd "$CALADAN_HOME"
 sudo ./scripts/setup_machine.sh
-sudo ./iokerneld simple nobw noidlefastwake
+sudo ./iokerneld simple nobw noidlefastwake 24-27
