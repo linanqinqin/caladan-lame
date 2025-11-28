@@ -16,9 +16,6 @@
 DEFINE_PERTHREAD(uint64_t, lame_scratch);
 DEFINE_PERTHREAD(uint8_t, in_lame) = 0;
 
-DEFINE_PERTHREAD(uint64_t, lame_counter_in_lame) = 0;
-DEFINE_PERTHREAD(uint64_t, lame_counter_in_preempt) = 0;
-
 /* External configuration variable */
 extern unsigned int cfg_lame_bundle_size;
 extern unsigned int cfg_emulation_lame_stall_cycles;
@@ -40,6 +37,12 @@ void lame_bundle_init(struct kthread *k)
 	bundle->used = 0;
 	bundle->total_cycles = 0;
 	bundle->total_lames = 0;
+	bundle->total_xsave_lames = 0;
+	bundle->total_xsave_cycles = 0;
+	bundle->total_early_lames = 0;
+	bundle->total_stall_lames = 0;
+	bundle->total_skip_lames = 0;
+	bundle->total_stall_cycles = 0;
 	bundle->enabled = false; /* Start disabled */
 
 }
@@ -59,6 +62,12 @@ void lame_bundle_cleanup(struct kthread *k)
 	bundle->used = 0;
 	bundle->total_cycles = 0;
 	bundle->total_lames = 0;
+	bundle->total_xsave_lames = 0;
+	bundle->total_xsave_cycles = 0;
+	bundle->total_early_lames = 0;
+	bundle->total_stall_lames = 0;
+	bundle->total_skip_lames = 0;
+	bundle->total_stall_cycles = 0;
 	bundle->enabled = false; /* Disable when cleaning up */
 }
 
@@ -596,10 +605,15 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 	struct kthread *k = perthread_read(mykthread);
 	thread_t *cur_th, *next_th;
 
+#ifdef CONFIG_LAME_TSC
+	uint64_t tsc_reg_start = __rdtsc();
+#endif
+
 	/* If there is only one uthread in the bundle, no need to schedule */
 	if (unlikely(lame_bundle_get_used_count(k) <= 1)) {
 		preempt_enable();
 		perthread_decr(in_lame);
+		lame_stall();
 		return;
 	}
 
@@ -610,11 +624,6 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 
 	/* Update __self to point to the new uthread */
 	perthread_store(__self, next_th);
-
-#ifdef CONFIG_LAME_TSC
-	/* increment total LAMEs counter */
-	k->lame_bundle.total_lames++; 
-#endif
 
 	if (unlikely(needs_xsave(rip))) {
 		unsigned char *xsave_buf;
@@ -637,7 +646,7 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 
 #ifdef CONFIG_LAME_TSC
 		/* increment total xsave LAMEs counter */
-		k->lame_bundle.total_cycles += __rdtsc() - tsc_start;
+		k->lame_bundle.total_xsave_cycles += __rdtsc() - tsc_start;
 		k->lame_bundle.total_xsave_lames++; 
 #endif
 
@@ -653,10 +662,24 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 		__builtin_ia32_xrstor64(xsave_buf, active_xstates); 
 	
 #ifdef CONFIG_LAME_TSC
-		k->lame_bundle.total_cycles += __rdtsc() - tsc_start;
+		k->lame_bundle.total_xsave_cycles += __rdtsc() - tsc_start;
 #endif
 	}	
 	else {
+		/* LAME re-triggered too early? */
+		// uint64_t tsc_now = __rdtsc();
+		// if (unlikely(tsc_now - next_th->lame_last_tsc < cfg_emulation_lame_stall_cycles)) {
+		// 	// _tpause(0, tsc_now + cfg_emulation_lame_stall_cycles - 400); // tpause here causes hanging
+		// 	k->lame_bundle.total_early_lames++; 
+		// }
+		// next_th->lame_last_tsc = tsc_now - 200;
+
+#ifdef CONFIG_LAME_TSC
+		/* increment total LAMEs counter */
+		k->lame_bundle.total_lames++; 
+		k->lame_bundle.total_cycles += __rdtsc() - tsc_reg_start;
+#endif
+
 		/* Call __lame_jmp_thread_direct to perform context switch */
 		__lame_jmp_thread_direct(&cur_th->tf, &next_th->tf);
 	}
@@ -669,10 +692,25 @@ __always_inline __nofp void lame_handle_bret(uint64_t *ret) {
 }
 
 __always_inline __nofp void lame_stall(void) {
+#ifdef CONFIG_LAME_TSC
+	struct kthread *k = perthread_read(mykthread);
+	k->lame_bundle.total_stall_lames++;
+	uint64_t tsc_start = __rdtsc();
+#endif
 	if (cfg_emulation_lame_stall_cycles > 0) {
     	_tpause(0, __rdtsc() + cfg_emulation_lame_stall_cycles);
 	}
+#ifdef CONFIG_LAME_TSC
+	k->lame_bundle.total_stall_cycles += __rdtsc() - tsc_start;
+#endif
 }
+
+#ifdef CONFIG_LAME_TSC
+__always_inline __nofp void lame_skip(void) {
+	struct kthread *k = perthread_read(mykthread);
+	k->lame_bundle.total_skip_lames++;
+}
+#endif
 
 __always_inline __nofp void lame_handle_bret_slowpath(void) {
 	struct kthread *k;
@@ -722,12 +760,21 @@ void lame_print_tsc_counters(void)
 		struct kthread *k = ks[i];
 		if (!k)
 			continue;
-		log_warn("[LAME][TSC][kthread:%u] avg_cycles=%lu; total_cycles=%lu; total_lames=%lu; total_xsave_lames=%lu; skip=%lu; stall=%lu; in_lame=%u", i,
+		log_warn("[LAME][TSC][kthread:%u] lames=[%lu,%lu,%lu]; [xsave=%lu,%lu,%lu]; early=%lu; skip=%lu; [stall=%lu,%lu,%lu]", i,
+				 k->lame_bundle.total_lames,
 				 k->lame_bundle.total_lames? k->lame_bundle.total_cycles / k->lame_bundle.total_lames : 0, 
-				 k->lame_bundle.total_cycles, k->lame_bundle.total_lames,
+				 k->lame_bundle.total_cycles, 
+				 /* xsave stats start */
 				 k->lame_bundle.total_xsave_lames,
-				 perthread_read(lame_counter_in_lame), perthread_read(lame_counter_in_preempt),
-				 (uint8_t)perthread_read(in_lame));
+				 k->lame_bundle.total_xsave_lames? k->lame_bundle.total_xsave_cycles / k->lame_bundle.total_xsave_lames : 0, 
+				 k->lame_bundle.total_xsave_cycles, 
+				 /* xsave stats end */
+				 k->lame_bundle.total_early_lames, 
+				 k->lame_bundle.total_skip_lames, 
+				 /* stall stats start */
+				 k->lame_bundle.total_stall_lames, 
+				 k->lame_bundle.total_stall_lames? k->lame_bundle.total_stall_cycles / k->lame_bundle.total_stall_lames : 0, 
+				 k->lame_bundle.total_stall_cycles);
 #ifdef CONFIG_DEBUG
 		for (int j = 0; j < 10; j++) {
 			log_warn("[LAME][kthread:%u] rip=%lx; decision=%d", i, 

@@ -551,15 +551,14 @@ __lame_entry_bret:
 
 1:  /* already in LAME context */
 #ifdef CONFIG_LAME_TSC
-	incq	%gs:__perthread_lame_counter_in_lame(%rip)
+	pushcallerregs
+	call 	lame_skip
+	popcallerregs
 #endif
 	bretq
 
 2:  /* preemption is already disabled; must run as a stall */
 	pushcallerregs
-#ifdef CONFIG_LAME_TSC
-	incq	%gs:__perthread_lame_counter_in_preempt(%rip)
-#endif
 	call	lame_stall
 	popcallerregs
 	bretq

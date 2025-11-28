@@ -65,6 +65,7 @@ struct thread {
 	struct list_node	gc_link;
 	unsigned int		onk;
 #endif
+	uint64_t 		lame_last_tsc;
 };
 
 typedef void (*runtime_fn_t)(void);
@@ -143,6 +144,11 @@ struct lame_bundle {
 	uint64_t			total_xsave_lames;	/* total LAMEs handled with xsave */
 	bool				enabled;	/* dynamic runtime enable/disable flag */
 	bool				pad[7];		/* padding to align to 8-byte boundary */
+	uint64_t 			total_xsave_cycles; /* total cycles for xsave overhead */
+	uint64_t 			total_early_lames; 	/* total LAMEs that are re-triggered too early */
+	uint64_t 			total_stall_lames; 	/* total LAMEs that had to wait out a full stall */
+	uint64_t 			total_skip_lames; 	/* total LAMEs skipped */
+	uint64_t 			total_stall_cycles;
 };
 
 /*
@@ -515,6 +521,7 @@ extern void lame_xsave_buf_free(thread_t *th);
 extern void lame_handle(uint64_t rip);
 extern void lame_handle_ret(uint64_t *ret);
 extern void lame_stall(void);
+extern void lame_skip(void);
 extern void lame_handle_bret_slowpath(void);
 
 /* Dynamic bundle scheduling control functions */

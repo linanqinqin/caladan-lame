@@ -400,19 +400,25 @@ static int lame_init(void)
 			/* via PMU, with stall emulation */
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
 			arg.handler_addr = (__u64)__lame_entry_stall_bret;
-		} else {
+		} else if (cfg_lame_register == RT_LAME_REGISTER_NOP) {
 			/* via PMU, with nop */
 			register_mode = LAME_REGISTER_PMU; /* pmu, stall, nop use the same kernel register */
 			arg.handler_addr = (__u64)__lame_entry_nop_bret;
+		}
+		else {
+			log_err("unsupported LAME register type");
+			return -1;
 		}
 		
 		ret = ioctl(lamedev, register_mode, &arg);
 		if (ret < 0) {
 			log_err("[errno %d] ioctl LAME_REGISTER failed", errno);
 		} else {
+			char *lame_types[5] = {"none", "int", "pmu", "stall", "nop"};
 			log_notice("LAME handler registered at %p [bundle size: %u][mode: %s][stall: %u]", 
 				(void *)arg.handler_addr, cfg_lame_bundle_size, 
-				cfg_lame_register == RT_LAME_REGISTER_INT ? "int" : (cfg_lame_register == RT_LAME_REGISTER_PMU ? "pmu" : "stall"),
+				// cfg_lame_register == RT_LAME_REGISTER_INT ? "int" : (cfg_lame_register == RT_LAME_REGISTER_PMU ? "pmu" : "stall"),
+				lame_types[cfg_lame_register], 
 				cfg_emulation_lame_stall_cycles);
 		}
 		close(lamedev);
