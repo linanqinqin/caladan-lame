@@ -391,7 +391,11 @@ static int lame_init(void)
 		if (cfg_lame_register == RT_LAME_REGISTER_INT) {
 			/* via INT*/
 			register_mode = LAME_REGISTER_INT;
-			arg.handler_addr = (__u64)__lame_entry;
+			if (cfg_lame_bundle_size == 2) {
+				arg.handler_addr = (__u64)__lame_entry2;
+			} else {
+				arg.handler_addr = (__u64)__lame_entry_nop;
+			}
 		} else if (cfg_lame_register == RT_LAME_REGISTER_PMU) {
 			/* via PMU, with LAME switching */
 			register_mode = LAME_REGISTER_PMU;
