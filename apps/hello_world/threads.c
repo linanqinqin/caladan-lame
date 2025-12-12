@@ -15,6 +15,10 @@
 #include <getopt.h>
 #include <x86intrin.h>  // For RDTSC
 
+#ifndef unlikely
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#endif
+
 #define NUM_THREADS_MAX 256
 #define MIN_MATRIX_SIZE 1024
 #define MAX_MATRIX_SIZE 2048
@@ -23,6 +27,7 @@
 int enable_lame = 0;
 int total_tasks = -1;  // -1 means infinite, otherwise total number of tasks to run
 int tasks_completed = 0;  // Counter for completed tasks
+int lame_interval = 10000; // LAME trigger interval in the innermost loop
 
 // Enable per-task measurement mode (set by -m)
 static int measure_mode = 0;
@@ -75,15 +80,19 @@ void matrix_multiply(int *A, int *B, int *C, int size, int *lame_count, unsigned
                 // Use long long to prevent integer overflow
                 long long temp = (long long)A[i * size + k] * B[k * size + j];
                 C[i * size + j] += (int)(temp % 1000000); // Keep result manageable
+
+                if (unlikely(enable_lame && (i % lame_interval == 0))) {
+                    __asm__ volatile("int $0x1f"); // trigger LAME interrupt
+                }
             }
-        }
-        if (enable_lame) { // Only trigger LAME interrupt if enabled
-            unsigned long long tsc_before = __rdtsc();
-            __asm__ volatile("int $0x1f"); // trigger LAME interrupt
-            unsigned long long tsc_after = __rdtsc();
-            
-            (*lame_count)++;
-            (*tsc_ticks) += (tsc_after - tsc_before);
+            // if (enable_lame) { // Only trigger LAME interrupt if enabled
+            //     // unsigned long long tsc_before = __rdtsc();
+            //     __asm__ volatile("int $0x1f"); // trigger LAME interrupt
+            //     // unsigned long long tsc_after = __rdtsc();
+                
+            //     // (*lame_count)++;
+            //     // (*tsc_ticks) += (tsc_after - tsc_before);
+            // }
         }
     }
 }
@@ -184,7 +193,7 @@ int main(int argc, char *argv[])
     enable_lame = 0;  // Default value
     total_tasks = -1;  // Default to infinite
     
-    while ((opt = getopt(argc, argv, "w:lt:m")) != -1) {
+    while ((opt = getopt(argc, argv, "w:lt:mi:")) != -1) {
         switch (opt) {
             case 'w':
                 num_threads = atoi(optarg);
@@ -205,6 +214,13 @@ int main(int argc, char *argv[])
                 break;
             case 'm':
                 measure_mode = 1;
+                break;
+            case 'i':
+                lame_interval = atoi(optarg);
+                if (lame_interval <= 0) {
+                    printf("Error: LAME interval must be greater than 0\n");
+                    return 1;
+                }
                 break;
             default:
                 printf("Usage: %s [-w num_threads] [-l] [-t total_tasks] [-m]\n", argv[0]);
