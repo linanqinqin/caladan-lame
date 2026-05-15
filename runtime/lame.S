@@ -16,7 +16,7 @@
  */
 .macro bretq
     popfq
-    retq
+    retq 	$128
     ud2
 .endm
 
