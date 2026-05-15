@@ -591,6 +591,11 @@ static __always_inline __nofp bool needs_xsave(uint64_t rip)
 }
 #endif
 
+static __always_inline __nofp bool is_apptext(uint64_t rip) 
+{
+	return (rip >= text_section_start && rip < text_section_end);
+}
+
 /**
  * lame_handle - handles LAME exception and performs context switch
  * 
@@ -608,8 +613,11 @@ __always_inline __nofp void lame_handle(uint64_t rip)
 	struct kthread *k = perthread_read(mykthread);
 	thread_t *cur_th, *next_th;
 
-	/* If there is only one uthread in the bundle, no need to schedule */
-	if (unlikely(lame_bundle_get_used_count(k) <= 1)) {
+	/* no switching if: 
+	 * - not in app text
+	 * - only one uthread in the bundle */
+	if (unlikely( (!is_apptext(rip)) || 
+					(lame_bundle_get_used_count(k) <= 1) )) {
 		preempt_enable();
 		perthread_decr(in_lame);
 		lame_stall();
